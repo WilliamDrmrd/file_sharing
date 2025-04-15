@@ -218,39 +218,29 @@ export class FolderDownloadController {
         const storageFilename = media.url.split('/').pop();
         if (storageFilename) {
           const filePath = path.join('./uploads', storageFilename);
-          if (fs.existsSync(filePath)) {
-            const ext = extname(storageFilename);
-
-            // Get folder name for the filename
-            const mediaFolder = await this.prisma.folder.findUnique({
-              where: { id: media.folderId }
-            });
-
-            // Use folder name directly
-            let downloadFilename = mediaFolder ? `${mediaFolder.name}${ext}` : `file${ext}`;
-
+          if (fs.existsSync(filePath) && media.originalFilename) {
             // If name already used, add a suffix
-            if (usedFilenames.has(downloadFilename)) {
+            if (usedFilenames.has(media.originalFilename)) {
               let counter = 1;
-              let nameBase = downloadFilename.substring(
+              const nameBase = media.originalFilename.substring(
                 0,
-                downloadFilename.lastIndexOf('.'),
+                media.originalFilename.lastIndexOf('.'),
               );
-              const extension = downloadFilename.substring(
-                downloadFilename.lastIndexOf('.'),
+              const extension = media.originalFilename.substring(
+                media.originalFilename.lastIndexOf('.'),
               );
 
               while (usedFilenames.has(`${nameBase}_${counter}${extension}`)) {
                 counter++;
               }
 
-              downloadFilename = `${nameBase}_${counter}${extension}`;
+              media.originalFilename = `${nameBase}_${counter}${extension}`;
             }
 
-            usedFilenames.add(downloadFilename);
+            usedFilenames.add(media.originalFilename);
 
             // Add file to the archive with the user-friendly name
-            archive.file(filePath, { name: downloadFilename });
+            archive.file(filePath, { name: media.originalFilename });
           }
         }
       }
