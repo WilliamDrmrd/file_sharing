@@ -22,13 +22,13 @@ export default function Folder() {
   useEffect(() => {
     setLoading(true);
     console.log("Fetching folder data for ID:", id);
-    
+
     // First fetch folder details to check if password protected
     fetchFolder(id!)
       .then(folderData => {
         console.log("Folder details:", folderData);
         setFolder(folderData);
-        
+
         // If folder has no password or password is already verified, fetch content
         if (!folderData.password || passwordVerified) {
           fetchFolderContent(id!)
@@ -53,35 +53,36 @@ export default function Folder() {
         setLoading(false);
       });
   }, [id, passwordVerified]);
-  
+
   // Filter media based on search query
   useEffect(() => {
     if (!searchQuery.trim()) {
       setFilteredMedia(media);
       return;
     }
-    
-    const lowercaseQuery = searchQuery.toLowerCase();
-    const filtered = media.filter(item => 
-      // Search by ID or type
-      item.id.toLowerCase().includes(lowercaseQuery) || 
+
+    const lowercaseQuery = searchQuery.toLowerCase().trim();
+    const filtered = media.filter(item =>
+      // Search by original filename, ID or type
+      (item.originalFilename && item.originalFilename.toLowerCase().includes(lowercaseQuery)) ||
+      item.id.toLowerCase().includes(lowercaseQuery) ||
       item.type.toLowerCase().includes(lowercaseQuery)
     );
-    
+
     setFilteredMedia(filtered);
   }, [searchQuery, media]);
 
   const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
-    
+
     const formData = new FormData();
     for (const file of Array.from(e.target.files)) {
       formData.append("files", file);
     }
-    
+
     // Add the uploader name - You can replace this with actual user name
     formData.append("uploadedBy", "Front-End User");
-    
+
     try {
       setLoading(true);
       const newMediaItems = await uploadMedia(id!, formData);
@@ -116,13 +117,13 @@ export default function Folder() {
       for (const file of Array.from(e.dataTransfer.files)) {
         formData.append("files", file);
       }
-      
+
       // Add the uploader name - You can replace this with actual user name
       formData.append("uploadedBy", "Front-End User");
-      
+
       // Show loading state
       setLoading(true);
-      
+
       uploadMedia(id!, formData)
         .then(newMediaItems => {
           // Handle array of media items returned from backend
@@ -137,17 +138,17 @@ export default function Folder() {
         });
     }
   };
-  
+
   // Handle password verification
   const handleVerifyPassword = async () => {
     if (!folder || !id) return;
-    
+
     setPasswordError(false);
     setLoading(true);
-    
+
     try {
       const isVerified = await verifyFolderPassword(id, passwordInput);
-      
+
       if (isVerified) {
         setPasswordVerified(true);
         // Fetch folder content after successful verification
@@ -174,9 +175,9 @@ export default function Folder() {
   const videoCount = media.filter(item => item.type === "video").length;
 
   return (
-    <Box 
+    <Box
       onDragEnter={handleDrag}
-      sx={{ 
+      sx={{
         minHeight: 'calc(100vh - 124px)', // Account for header height
         display: 'flex',
         flexDirection: 'column'
@@ -212,8 +213,8 @@ export default function Folder() {
         </DialogContent>
         <DialogActions>
           <Button component={Link} to="/folders">Go Back</Button>
-          <Button 
-            onClick={handleVerifyPassword} 
+          <Button
+            onClick={handleVerifyPassword}
             variant="contained"
             disabled={loading}
           >
@@ -221,19 +222,19 @@ export default function Folder() {
           </Button>
         </DialogActions>
       </Dialog>
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: { xs: 'flex-start', sm: 'center' }, 
+      <Box sx={{
+        display: 'flex',
+        alignItems: { xs: 'flex-start', sm: 'center' },
         justifyContent: 'space-between',
         flexDirection: { xs: 'column', sm: 'row' },
         gap: { xs: 2, sm: 0 },
         mb: 4
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <IconButton 
-            component={Link} 
+          <IconButton
+            component={Link}
             to="/folders"
-            sx={{ 
+            sx={{
               color: 'text.secondary',
               mr: 2,
               '&:hover': { color: 'primary.main' }
@@ -241,7 +242,7 @@ export default function Folder() {
           >
             <ArrowBack />
           </IconButton>
-          
+
           <Box>
             <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
               Folder Content
@@ -249,14 +250,14 @@ export default function Folder() {
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
               {!loading && (
                 <>
-                  <Chip 
-                    icon={<PhotoLibrary fontSize="small" />} 
+                  <Chip
+                    icon={<PhotoLibrary fontSize="small" />}
                     label={`${photoCount} Photos`}
                     size="small"
                     sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}
                   />
-                  <Chip 
-                    icon={<VideoCameraBack fontSize="small" />} 
+                  <Chip
+                    icon={<VideoCameraBack fontSize="small" />}
                     label={`${videoCount} Videos`}
                     size="small"
                     sx={{ bgcolor: alpha(theme.palette.secondary.main, 0.1) }}
@@ -266,7 +267,7 @@ export default function Folder() {
             </Box>
           </Box>
         </Box>
-        
+
         <Box sx={{ display: 'flex', gap: 2 }}>
           <TextField
             placeholder="Search files..."
@@ -282,12 +283,12 @@ export default function Folder() {
             }}
             sx={{ width: 200 }}
           />
-          
-          <Button 
+
+          <Button
             variant="contained"
             component="label"
             startIcon={<CloudUpload />}
-            sx={{ 
+            sx={{
               borderRadius: 2,
               px: 3,
               py: 1.2,
@@ -299,7 +300,7 @@ export default function Folder() {
           </Button>
         </Box>
       </Box>
-      
+
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', my: 8 }}>
           <CircularProgress />
@@ -314,12 +315,12 @@ export default function Folder() {
             justifyContent: 'center',
             textAlign: 'center',
             p: 5,
-            border: dragActive 
-              ? `2px dashed ${theme.palette.primary.main}` 
+            border: dragActive
+              ? `2px dashed ${theme.palette.primary.main}`
               : `2px dashed ${alpha(theme.palette.primary.main, 0.3)}`,
             borderRadius: 4,
-            bgcolor: dragActive 
-              ? alpha(theme.palette.primary.main, 0.08) 
+            bgcolor: dragActive
+              ? alpha(theme.palette.primary.main, 0.08)
               : alpha(theme.palette.common.white, 0.02),
             transition: 'all 0.3s ease',
           }}
@@ -333,11 +334,11 @@ export default function Folder() {
             {dragActive ? 'Drop files here' : 'No media found in this folder'}
           </Typography>
           <Typography color="text.secondary" sx={{ mb: 3, maxWidth: 450 }}>
-            {dragActive 
-              ? 'Release to upload your photos and videos' 
+            {dragActive
+              ? 'Release to upload your photos and videos'
               : 'Upload some photos or videos, or drag and drop files anywhere on this page'}
           </Typography>
-          <Button 
+          <Button
             variant="contained"
             component="label"
             startIcon={<CloudUpload />}

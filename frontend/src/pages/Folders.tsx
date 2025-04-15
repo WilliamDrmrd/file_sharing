@@ -19,8 +19,8 @@ export default function Folders() {
         setFilteredFolders(folders);
       } else {
         const lowercaseQuery = searchQuery.toLowerCase();
-        const filtered = folders.filter(folder => 
-          folder.name.toLowerCase().includes(lowercaseQuery) || 
+        const filtered = folders.filter(folder =>
+          folder.name.toLowerCase().includes(lowercaseQuery) ||
           folder.createdBy.toLowerCase().includes(lowercaseQuery)
         );
         setFilteredFolders(filtered);
@@ -32,9 +32,9 @@ export default function Folders() {
 
   return (
     <Box>
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: { xs: 'stretch', md: 'center' }, 
+      <Box sx={{
+        display: 'flex',
+        alignItems: { xs: 'stretch', md: 'center' },
         justifyContent: 'space-between',
         flexDirection: { xs: 'column', md: 'row' },
         gap: { xs: 2, md: 0 },
@@ -42,19 +42,19 @@ export default function Folders() {
       }}>
         <Box>
           <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-            Your Folders
+            Folders
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Browse and manage your media folders
+            Browse and manage media folders
           </Typography>
         </Box>
-        
-        <Button 
+
+        <Button
           variant="contained"
           component={Link}
           to="/create"
           startIcon={<Add />}
-          sx={{ 
+          sx={{
             borderRadius: 2,
             px: 3,
             py: 1,
@@ -65,7 +65,7 @@ export default function Folders() {
           New Folder
         </Button>
       </Box>
-      
+
       {/* Search Box */}
       <Box sx={{ mb: 3 }}>
         <TextField
@@ -84,14 +84,14 @@ export default function Folders() {
           }}
         />
       </Box>
-      
+
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', my: 8 }}>
           <CircularProgress />
         </Box>
       ) : folders.length === 0 ? (
-        <Box sx={{ 
-          textAlign: 'center', 
+        <Box sx={{
+          textAlign: 'center',
           py: 10,
           px: 2,
           borderRadius: 4,
@@ -102,7 +102,7 @@ export default function Folders() {
           <Typography color="text.secondary" sx={{ mb: 3 }}>
             Create a new folder to start organizing your media
           </Typography>
-          <Button 
+          <Button
             variant="contained"
             component={Link}
             to="/create"
@@ -112,8 +112,8 @@ export default function Folders() {
           </Button>
         </Box>
       ) : filteredFolders.length === 0 ? (
-        <Box sx={{ 
-          textAlign: 'center', 
+        <Box sx={{
+          textAlign: 'center',
           py: 10,
           px: 2,
           borderRadius: 4,
@@ -124,7 +124,7 @@ export default function Folders() {
           <Typography color="text.secondary" sx={{ mb: 3 }}>
             Try a different search term
           </Typography>
-          <Button 
+          <Button
             variant="outlined"
             onClick={() => setSearchQuery('')}
           >
