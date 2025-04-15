@@ -1,4 +1,4 @@
-import { Drawer, List, ListItemButton, ListItemIcon, ListItemText, Box, Typography, Divider, useTheme, Avatar } from "@mui/material";
+import { Drawer, List, ListItemButton, ListItemIcon, ListItemText, Box, Typography, Divider, useTheme, Avatar, useMediaQuery } from "@mui/material";
 import { Folder, Add, AdminPanelSettings, Image } from "@mui/icons-material";
 import { Link, useLocation } from "react-router-dom";
 
@@ -8,25 +8,18 @@ const menuItems = [
   { text: "Admin", icon: <AdminPanelSettings />, to: "/admin" }
 ];
 
-export default function LeftMenu() {
+interface LeftMenuProps {
+  mobileOpen?: boolean;
+  onClose?: () => void;
+}
+
+export default function LeftMenu({ mobileOpen = false, onClose }: LeftMenuProps) {
   const location = useLocation();
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
-  return (
-    <Drawer
-      variant="permanent"
-      sx={{
-        width: 280,
-        flexShrink: 0,
-        [`& .MuiDrawer-paper`]: { 
-          width: 280, 
-          boxSizing: "border-box",
-          background: 'linear-gradient(180deg, rgba(15,23,42,1) 0%, rgba(31,41,55,0.95) 100%)',
-          borderRight: `1px solid ${theme.palette.divider}`,
-        },
-        display: { xs: 'none', md: 'block' }
-      }}
-    >
+  const drawerContent = (
+    <>
       <Box sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
         <Avatar sx={{ bgcolor: 'primary.main', width: 40, height: 40 }}>
           <Image />
@@ -54,6 +47,7 @@ export default function LeftMenu() {
               component={Link}
               to={item.to}
               selected={location.pathname === item.to}
+              onClick={isMobile ? onClose : undefined}
               sx={{
                 borderRadius: 2,
                 mb: 1,
@@ -110,6 +104,49 @@ export default function LeftMenu() {
           </Box>
         </Box>
       </Box>
-    </Drawer>
+    </>
+  );
+  
+  return (
+    <>
+      {/* Permanent drawer for desktop */}
+      <Drawer
+        variant="permanent"
+        sx={{
+          width: 280,
+          flexShrink: 0,
+          [`& .MuiDrawer-paper`]: { 
+            width: 280, 
+            boxSizing: "border-box",
+            background: 'linear-gradient(180deg, rgba(15,23,42,1) 0%, rgba(31,41,55,0.95) 100%)',
+            borderRight: `1px solid ${theme.palette.divider}`,
+          },
+          display: { xs: 'none', md: 'block' }
+        }}
+      >
+        {drawerContent}
+      </Drawer>
+      
+      {/* Temporary drawer for mobile */}
+      <Drawer
+        variant="temporary"
+        open={mobileOpen}
+        onClose={onClose}
+        ModalProps={{
+          keepMounted: true, // Better mobile performance
+        }}
+        sx={{
+          display: { xs: 'block', md: 'none' },
+          '& .MuiDrawer-paper': {
+            width: 280,
+            boxSizing: 'border-box',
+            background: 'linear-gradient(180deg, rgba(15,23,42,1) 0%, rgba(31,41,55,0.95) 100%)',
+            borderRight: `1px solid ${theme.palette.divider}`,
+          },
+        }}
+      >
+        {drawerContent}
+      </Drawer>
+    </>
   );
 }

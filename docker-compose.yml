@@ -17,8 +17,8 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
 
-  nestjs:
-    build: .
+  backend:
+    build: ./backend
     ports:
       - "3000:3000"
     command: sh -c "npm install && npm run start:dev"
@@ -29,7 +29,19 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - .:/app
+      - ./backend:/app
+      - /app/node_modules
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3001:3001"
+    command: sh -c "npm install && npm start"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
 
 volumes:
   pg_data:

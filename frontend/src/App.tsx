@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Box, AppBar, Toolbar, Typography, IconButton, useTheme, alpha } from "@mui/material";
 import { Menu as MenuIcon } from "@mui/icons-material";
+import { useState } from "react";
 import LeftMenu from "./components/LeftMenu";
 import Folders from "./pages/Folders";
 import Folder from "./pages/Folder";
@@ -10,11 +11,16 @@ import Documentation from "./pages/Documentation";
 
 export default function App() {
   const theme = useTheme();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
+  };
   
   return (
     <Router>
       <Box sx={{ display: "flex", height: "100vh", bgcolor: "background.default" }}>
-        <LeftMenu />
+        <LeftMenu mobileOpen={mobileOpen} onClose={handleDrawerToggle} />
         
         <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
           <AppBar 
@@ -30,6 +36,7 @@ export default function App() {
             <Toolbar>
               <IconButton 
                 edge="start" 
+                onClick={handleDrawerToggle}
                 sx={{ 
                   mr: 2, 
                   display: { xs: 'block', md: 'none' },
