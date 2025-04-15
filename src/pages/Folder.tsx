@@ -76,7 +76,7 @@ export default function Folder() {
     
     const formData = new FormData();
     for (const file of Array.from(e.target.files)) {
-      formData.append("file", file);
+      formData.append("files", file);
     }
     
     // Add the uploader name - You can replace this with actual user name
@@ -84,8 +84,9 @@ export default function Folder() {
     
     try {
       setLoading(true);
-      const newMedia = await uploadMedia(id!, formData);
-      setMedia(prev => [newMedia, ...prev]);
+      const newMediaItems = await uploadMedia(id!, formData);
+      // Handle array of media items returned from backend
+      setMedia(prev => [...(Array.isArray(newMediaItems) ? newMediaItems : [newMediaItems]), ...prev]);
     } catch (error) {
       console.error("Error uploading media:", error);
       alert("Failed to upload media. Please try again.");
@@ -113,7 +114,7 @@ export default function Folder() {
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const formData = new FormData();
       for (const file of Array.from(e.dataTransfer.files)) {
-        formData.append("file", file);
+        formData.append("files", file);
       }
       
       // Add the uploader name - You can replace this with actual user name
@@ -123,8 +124,9 @@ export default function Folder() {
       setLoading(true);
       
       uploadMedia(id!, formData)
-        .then(newMedia => {
-          setMedia(prev => [newMedia, ...prev]);
+        .then(newMediaItems => {
+          // Handle array of media items returned from backend
+          setMedia(prev => [...(Array.isArray(newMediaItems) ? newMediaItems : [newMediaItems]), ...prev]);
         })
         .catch(error => {
           console.error("Error uploading media:", error);

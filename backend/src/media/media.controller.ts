@@ -5,6 +5,7 @@ import {
   Delete,
   Param,
   UploadedFile,
+  UploadedFiles,
   UseInterceptors,
   Body,
   Logger,
@@ -13,7 +14,7 @@ import {
 } from '@nestjs/common';
 import { MediaService } from './media.service';
 import { PrismaService } from '../prisma.service';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { randomUUID } from 'crypto';
@@ -39,7 +40,7 @@ export class MediaController {
 
   @Post()
   @UseInterceptors(
-    FileInterceptor('file', {
+    FilesInterceptor('files', 10, {
       storage: diskStorage({
         destination: './uploads',
         filename: (req, file, cb) => {
@@ -49,40 +50,44 @@ export class MediaController {
       }),
     }),
   )
-  async uploadFile(
+  async uploadFiles(
     @Param('folderId') folderId: string,
-    @UploadedFile() file,
+    @UploadedFiles() files,
     @Body() body: any,
   ) {
+    if (!files || files.length === 0) {
+      throw new Error('No files uploaded');
+    }
+    
     this.logger.log(
-      `Uploading file to folder ${folderId}: ${JSON.stringify(file)}`,
+      `Uploading files to folder ${folderId}: ${files.length} files`,
     );
     this.logger.log(`Body: ${JSON.stringify(body)}`);
-
-    // Determine the type
-    const mime = file.mimetype;
-    this.logger.log(`File MIME type: ${mime}`);
-
-    let type: 'photo' | 'video' = mime.startsWith('image/') ? 'photo' : 'video';
-    this.logger.log(`Determined file type: ${type}`);
 
     // Set uploadedBy to a default value
     const uploadedBy: string = body.uploadedBy || 'User';
 
-    const url = `/uploads/${file.filename}`;
-    this.logger.log(`File URL: ${url}`);
-
-    // Store the original filename
-    const originalFilename = file.originalname;
-    this.logger.log(`Original filename: ${originalFilename}`);
-
-    return this.mediaService.createWithFilename(
-      folderId,
-      url,
-      type,
-      uploadedBy,
-      originalFilename,
-    );
+    // Process all files and collect promises
+    const mediaPromises = files.map(file => {
+      const mime = file.mimetype;
+      const type: 'photo' | 'video' = mime.startsWith('image/') ? 'photo' : 'video';
+      const url = `/uploads/${file.filename}`;
+      const originalFilename = file.originalname;
+      
+      return this.mediaService.createWithFilename(
+        folderId,
+        url,
+        type,
+        uploadedBy,
+        originalFilename,
+      );
+    });
+    
+    // Wait for all files to be processed
+    const results = await Promise.all(mediaPromises);
+    
+    // Return all created media items
+    return results;
   }
 
   @Delete(':mediaId')
