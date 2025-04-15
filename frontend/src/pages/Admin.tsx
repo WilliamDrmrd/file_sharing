@@ -283,7 +283,12 @@ export default function Admin() {
                             <ListItem key={media.id} sx={{ pl: 4 }}>
                               <ListItemText
                                 primary={media.type === "photo" ? "Photo" : "Video"}
-                                secondary={media.url}
+                                secondary={
+                                  <>
+                                    {media.originalFilename && <div><strong>{media.originalFilename}</strong></div>}
+                                    <div>{media.url}</div>
+                                  </>
+                                }
                               />
                               <Button color="error" onClick={() => handleDeleteMedia(media.id, folder.id)}>
                                 Delete
