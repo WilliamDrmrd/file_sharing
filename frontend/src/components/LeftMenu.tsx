@@ -1,5 +1,5 @@
-import { Drawer, List, ListItemButton, ListItemIcon, ListItemText, Box, Typography, Divider, useTheme, Avatar, useMediaQuery } from "@mui/material";
-import { Folder, Add, AdminPanelSettings, Image } from "@mui/icons-material";
+import { Drawer, List, ListItemButton, ListItemIcon, ListItemText, Box, Typography, Divider, useTheme, Avatar, useMediaQuery, alpha, Chip } from "@mui/material";
+import { Folder, Add, AdminPanelSettings, PhotoLibrary, KeyboardArrowRight } from "@mui/icons-material";
 import { Link, useLocation } from "react-router-dom";
 
 const menuItems = [
@@ -20,25 +20,62 @@ export default function LeftMenu({ mobileOpen = false, onClose }: LeftMenuProps)
   
   const drawerContent = (
     <>
-      <Box sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Avatar sx={{ bgcolor: 'primary.main', width: 40, height: 40 }}>
-          <Image />
+      <Box 
+        sx={{ 
+          p: 3, 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 2,
+          position: 'relative',
+          overflow: 'hidden',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '100%',
+            background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.12)} 0%, transparent 50%)`,
+            zIndex: -1
+          }
+        }}
+      >
+        <Avatar 
+          sx={{ 
+            bgcolor: 'primary.main', 
+            width: { xs: 40, sm: 43, md: 46 }, 
+            height: { xs: 40, sm: 43, md: 46 },
+            background: 'linear-gradient(135deg, #8B5CF6 20%, #6D28D9 100%)',
+            boxShadow: '0 4px 12px rgba(139, 92, 246, 0.25)',
+            padding: '6px'
+          }}
+        >
+          <PhotoLibrary />
         </Avatar>
         <Box>
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>
+          <Typography variant="h6" sx={{ fontWeight: 800, letterSpacing: '-0.5px' }}>
             MediaVault
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="text.secondary" sx={{ opacity: 0.8 }}>
             Share your media securely
           </Typography>
         </Box>
       </Box>
       
-      <Divider sx={{ opacity: 0.2 }} />
+      <Divider sx={{ opacity: 0.1 }} />
       
-      <Box sx={{ p: 2 }}>
-        <Typography variant="overline" color="text.secondary" sx={{ pl: 2 }}>
-          MENU
+      <Box sx={{ px: 2, py: 3 }}>
+        <Typography 
+          variant="overline" 
+          color="text.secondary" 
+          sx={{ 
+            pl: 2, 
+            fontSize: '0.7rem', 
+            letterSpacing: '1.2px',
+            opacity: 0.6 
+          }}
+        >
+          MAIN NAVIGATION
         </Typography>
         <List sx={{ mt: 1 }}>
           {menuItems.map(item => (
@@ -49,61 +86,50 @@ export default function LeftMenu({ mobileOpen = false, onClose }: LeftMenuProps)
               selected={location.pathname === item.to}
               onClick={isMobile ? onClose : undefined}
               sx={{
-                borderRadius: 2,
+                borderRadius: 3,
                 mb: 1,
+                py: { xs: 1.2, sm: 1.3, md: 1.5 },
+                position: 'relative',
+                overflow: 'hidden',
+                transition: 'all 0.2s ease',
                 '&.Mui-selected': {
-                  backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                  backgroundColor: alpha(theme.palette.primary.main, 0.08),
                   '&:hover': {
-                    backgroundColor: 'rgba(99, 102, 241, 0.25)',
+                    backgroundColor: alpha(theme.palette.primary.main, 0.12),
                   },
                 },
+                '&:hover:not(.Mui-selected)': {
+                  backgroundColor: alpha(theme.palette.background.paper, 0.4)
+                }
               }}
             >
-              <ListItemIcon sx={{ color: location.pathname === item.to ? 'primary.main' : 'text.secondary', minWidth: 40 }}>
+              <ListItemIcon 
+                sx={{ 
+                  color: location.pathname === item.to ? 'primary.main' : 'text.secondary', 
+                  minWidth: 40,
+                  '& .MuiSvgIcon-root': {
+                    fontSize: '1.25rem'
+                  }
+                }}
+              >
                 {item.icon}
               </ListItemIcon>
               <ListItemText 
                 primary={item.text} 
                 primaryTypographyProps={{ 
-                  fontWeight: location.pathname === item.to ? 600 : 400,
-                  fontSize: '0.95rem'
+                  fontWeight: location.pathname === item.to ? 600 : 500,
+                  fontSize: { xs: '0.875rem', sm: '0.9rem', md: '0.95rem' }
                 }} 
               />
+              {location.pathname === item.to && (
+                <KeyboardArrowRight fontSize="small" color="primary" sx={{ opacity: 0.7 }} />
+              )}
             </ListItemButton>
           ))}
         </List>
       </Box>
       
-      <Box sx={{ mt: 'auto', p: 2 }}>
-        <Box sx={{ 
-          bgcolor: 'background.paper', 
-          p: 2, 
-          borderRadius: 3,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          border: '1px solid rgba(255,255,255,0.05)'
-        }}>
-          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-            Need help?
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Check our documentation for tips on using MediaVault.
-          </Typography>
-          <Box 
-            component={Link} 
-            to="/documentation" 
-            sx={{
-              display: 'inline-block',
-              fontSize: '0.875rem',
-              color: 'primary.main',
-              textDecoration: 'none',
-              fontWeight: 500,
-              '&:hover': { textDecoration: 'underline' }
-            }}
-          >
-            View Documentation
-          </Box>
-        </Box>
-      </Box>
+      <Box sx={{ mt: 'auto', p: 3 }} />
     </>
   );
   
@@ -118,8 +144,9 @@ export default function LeftMenu({ mobileOpen = false, onClose }: LeftMenuProps)
           [`& .MuiDrawer-paper`]: { 
             width: 280, 
             boxSizing: "border-box",
-            background: 'linear-gradient(180deg, rgba(15,23,42,1) 0%, rgba(31,41,55,0.95) 100%)',
-            borderRight: `1px solid ${theme.palette.divider}`,
+            background: 'linear-gradient(180deg, rgba(11,17,32,0.98) 0%, rgba(30,41,59,0.95) 100%)',
+            borderRight: `1px solid ${alpha('#fff', 0.05)}`,
+            boxShadow: '4px 0 24px rgba(0,0,0,0.08)',
           },
           display: { xs: 'none', md: 'block' }
         }}
@@ -140,8 +167,9 @@ export default function LeftMenu({ mobileOpen = false, onClose }: LeftMenuProps)
           '& .MuiDrawer-paper': {
             width: 280,
             boxSizing: 'border-box',
-            background: 'linear-gradient(180deg, rgba(15,23,42,1) 0%, rgba(31,41,55,0.95) 100%)',
-            borderRight: `1px solid ${theme.palette.divider}`,
+            background: 'linear-gradient(180deg, rgba(11,17,32,0.98) 0%, rgba(30,41,59,0.95) 100%)',
+            borderRight: `1px solid ${alpha('#fff', 0.05)}`,
+            boxShadow: '4px 0 24px rgba(0,0,0,0.2)',
           },
         }}
       >
