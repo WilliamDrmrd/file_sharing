@@ -4,6 +4,7 @@ import {
   Res, StreamableFile
 } from '@nestjs/common';
 import { MediaService } from './media.service';
+import { PrismaService } from '../prisma.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
@@ -54,12 +55,16 @@ export class MediaController {
     this.logger.log(`Determined file type: ${type}`);
 
     // Set uploadedBy to a default value
-    const uploadedBy: string = "User";
+    const uploadedBy: string = body.uploadedBy || "User";
 
     const url = `/uploads/${file.filename}`;
     this.logger.log(`File URL: ${url}`);
     
-    return this.mediaService.create(folderId, url, type, uploadedBy);
+    // Store the original filename
+    const originalFilename = file.originalname;
+    this.logger.log(`Original filename: ${originalFilename}`);
+    
+    return this.mediaService.createWithFilename(folderId, url, type, uploadedBy, originalFilename);
   }
 
   @Delete(':mediaId')
@@ -157,19 +162,27 @@ export class SingleMediaController {
         throw new Error('File not found on disk');
       }
       
-      // Determine the original filename extension
+      // Get extension
       const ext = extname(filename);
+      
+      // Use original filename if available, otherwise use ID
+      let downloadFilename = media.originalFilename || `file_${media.id}${ext}`;
+      
+      // Ensure filename has correct extension
+      if (!downloadFilename.endsWith(ext)) {
+        downloadFilename = `${downloadFilename}${ext}`;
+      }
       
       // Set response headers
       res.set({
         'Content-Type': media.type === 'photo' ? 'image/*' : 'video/*',
-        'Content-Disposition': `attachment; filename="download${ext}"`,
+        'Content-Disposition': `attachment; filename="${downloadFilename}"`,
       });
       
       // Create a read stream from the file
       const fileStream = fs.createReadStream(filePath);
       
-      this.logger.log(`Streaming file for download: ${filePath}`);
+      this.logger.log(`Streaming file for download: ${filePath} as ${downloadFilename}`);
       return new StreamableFile(fileStream);
     } catch (error) {
       this.logger.error(`Error downloading media: ${error.message}`);
@@ -182,7 +195,10 @@ export class SingleMediaController {
 export class FolderDownloadController {
   private readonly logger = new Logger(FolderDownloadController.name);
   
-  constructor(private readonly mediaService: MediaService) {}
+  constructor(
+    private readonly mediaService: MediaService,
+    private readonly prisma: PrismaService
+  ) {}
   
   @Get('download')
   async downloadFolder(@Param('folderId') folderId: string, @Res() res: Response) {
@@ -197,8 +213,14 @@ export class FolderDownloadController {
         return res.status(404).json({ message: 'No media found in folder' });
       }
       
-      // Generate a unique filename for the zip
-      const zipFilename = `folder_${folderId}_${Date.now()}.zip`;
+      // Get folder name to use in zip filename
+      const folder = await this.prisma.folder.findUnique({
+        where: { id: folderId },
+        select: { name: true }
+      });
+      
+      // Use folder name in the zip filename if available
+      const zipFilename = `${folder}_${Date.now()}.zip`;
       const zipPath = path.join('./uploads', zipFilename);
       
       // Create a write stream for the zip file
@@ -211,12 +233,41 @@ export class FolderDownloadController {
       archive.pipe(output);
       
       // Add all media files to the archive
+      // Keep track of filenames to avoid duplicates
+      const usedFilenames = new Set<string>();
+      
       for (const media of mediaItems) {
-        const filename = media.url.split('/').pop();
-        if (filename) {
-          const filePath = path.join('./uploads', filename);
+        const storageFilename = media.url.split('/').pop();
+        if (storageFilename) {
+          const filePath = path.join('./uploads', storageFilename);
           if (fs.existsSync(filePath)) {
-            archive.file(filePath, { name: filename });
+            const ext = extname(storageFilename);
+            
+            // Create a user-friendly filename using original filename if available
+            let downloadFilename = media.originalFilename || `file_${media.id}${ext}`;
+            
+            // Ensure filename has correct extension
+            if (!downloadFilename.endsWith(ext)) {
+              downloadFilename = `${downloadFilename}${ext}`;
+            }
+            
+            // If name already used, add a suffix
+            if (usedFilenames.has(downloadFilename)) {
+              let counter = 1;
+              let nameBase = downloadFilename.substring(0, downloadFilename.lastIndexOf('.'));
+              const extension = downloadFilename.substring(downloadFilename.lastIndexOf('.'));
+              
+              while (usedFilenames.has(`${nameBase}_${counter}${extension}`)) {
+                counter++;
+              }
+              
+              downloadFilename = `${nameBase}_${counter}${extension}`;
+            }
+            
+            usedFilenames.add(downloadFilename);
+            
+            // Add file to the archive with the user-friendly name
+            archive.file(filePath, { name: downloadFilename });
           }
         }
       }
@@ -231,7 +282,7 @@ export class FolderDownloadController {
         // Set download headers
         res.set({
           'Content-Type': 'application/zip',
-          'Content-Disposition': `attachment; filename="folder_${folderId}.zip"`,
+          'Content-Disposition': `attachment; filename="${sanitizedFolderName}.zip"`,
         });
         
         // Send the zip file

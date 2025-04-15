@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "linux-arm64-openssl-3.0.x"]
 }
 
@@ -9,22 +9,23 @@ datasource db {
 }
 
 model Folder {
-  id         String     @id @default(uuid())
-  name       String
-  createdBy  String
-  password   String?
-  createdAt  DateTime   @default(now())
-  media      Media[]
+  id        String   @id @default(uuid())
+  name      String
+  createdBy String
+  password  String?
+  createdAt DateTime @default(now())
+  media     Media[]
 }
 
 model Media {
-  id         String   @id @default(uuid())
-  folder     Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
-  folderId   String
-  url        String
-  type       MediaType
-  uploadedAt DateTime @default(now())
-  uploadedBy String
+  id               String    @id @default(uuid())
+  folderId         String
+  url              String
+  type             MediaType
+  uploadedAt       DateTime  @default(now())
+  uploadedBy       String
+  originalFilename String?
+  folder           Folder    @relation(fields: [folderId], references: [id], onDelete: Cascade)
 }
 
 model Log {

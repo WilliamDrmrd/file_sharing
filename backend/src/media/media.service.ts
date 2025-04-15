@@ -29,6 +29,13 @@ export class MediaService {
       data: { folderId, url, type, uploadedBy }
     });
   }
+  
+  async createWithFilename(folderId: string, url: string, type: MediaType, uploadedBy: string, originalFilename: string) {
+    this.logger.log(`Creating media for folder ${folderId}, type ${type}, url ${url}, originalFilename ${originalFilename}`);
+    return this.prisma.media.create({
+      data: { folderId, url, type, uploadedBy, originalFilename }
+    });
+  }
 
   async remove(mediaId: string) {
     this.logger.log(`Removing media from database: ${mediaId}`);

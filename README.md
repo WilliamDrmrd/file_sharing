@@ -1,46 +1,102 @@
-# Getting Started with Create React App
+# MediaVault - Secure File Sharing
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+MediaVault is a secure file sharing application for photos and videos, with password-protected folders and administrative controls.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- Create folders to organize media files
+- Password protection for sensitive folders
+- Upload photos and videos via direct upload or drag-and-drop
+- View media with built-in viewer
+- Download individual files or entire folders as ZIP
+- Search functionality to quickly find content
+- Admin panel for management and monitoring
+- Activity logging
 
-### `npm start`
+## Getting Started
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+### Prerequisites
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+- Node.js (v16 or higher)
+- PostgreSQL database
 
-### `npm test`
+### Installation
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/mediavault.git
+cd mediavault
+```
 
-### `npm run build`
+2. Install frontend dependencies:
+```bash
+npm install
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+3. Navigate to the backend directory and install backend dependencies:
+```bash
+cd backend
+npm install
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+4. Create a `.env` file in the backend directory with the following content:
+```
+DATABASE_URL=postgres://username:password@localhost:5432/media_vault_db
+ADMIN_PASSWORD=admin123
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+5. Initialize the database:
+```bash
+npx prisma migrate dev
+```
 
-### `npm run eject`
+### Running the Application
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+1. Start the backend server:
+```bash
+cd backend
+npm run start:dev
+```
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+2. In a separate terminal, start the frontend:
+```bash
+npm start
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+3. Open your browser and navigate to `http://localhost:3000`
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+## Admin Access
 
-## Learn More
+To access the admin panel:
+1. Navigate to the Admin section from the sidebar
+2. Use the password defined in your `.env` file (default: admin123)
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## Tech Stack
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+- **Frontend**: React, Material-UI, TypeScript
+- **Backend**: NestJS, Prisma, PostgreSQL
+- **File Storage**: Local filesystem
+
+## Project Structure
+
+- `/src` - Frontend React application
+- `/backend` - NestJS backend API
+- `/backend/prisma` - Database schema and migrations
+
+## Key Features
+
+### Password Protection
+Folders can be created with password protection to secure sensitive content.
+
+### File Management
+Upload, download, and view media files in a user-friendly interface.
+
+### Admin Controls
+Admin panel for managing folders, media, and viewing activity logs.
+
+### Search
+Search functionality to quickly find content within folders.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

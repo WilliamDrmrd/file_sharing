@@ -1,24 +1,75 @@
 import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { fetchFolderContent, uploadMedia } from "../api/mediaApi";
+import { fetchFolderContent, uploadMedia, fetchFolder, verifyFolderPassword } from "../api/mediaApi";
 import { MediaItem } from "../types";
-import { Typography, Button, Box, CircularProgress, Paper, useTheme, alpha, Chip, Divider, IconButton, Tooltip } from "@mui/material";
-import { ArrowBack, CloudUpload, PhotoLibrary, VideoCameraBack } from "@mui/icons-material";
+import { Typography, Button, Box, CircularProgress, Paper, useTheme, alpha, Chip, Divider, IconButton, Tooltip, TextField, InputAdornment, Dialog, DialogTitle, DialogContent, DialogActions, Alert } from "@mui/material";
+import { ArrowBack, CloudUpload, PhotoLibrary, VideoCameraBack, Search, Lock } from "@mui/icons-material";
 import MediaGrid from "../components/MediaGrid";
 
 export default function Folder() {
   const { id } = useParams();
   const [media, setMedia] = useState<MediaItem[]>([]);
+  const [filteredMedia, setFilteredMedia] = useState<MediaItem[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [dragActive, setDragActive] = useState(false);
+  const [folder, setFolder] = useState<{id: string, name: string, password?: string} | null>(null);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordVerified, setPasswordVerified] = useState(false);
+  const [passwordError, setPasswordError] = useState(false);
   const theme = useTheme();
 
   useEffect(() => {
-    fetchFolderContent(id!).then(items => {
-      setMedia(items);
-      setLoading(false);
-    });
-  }, [id]);
+    setLoading(true);
+    console.log("Fetching folder data for ID:", id);
+    
+    // First fetch folder details to check if password protected
+    fetchFolder(id!)
+      .then(folderData => {
+        console.log("Folder details:", folderData);
+        setFolder(folderData);
+        
+        // If folder has no password or password is already verified, fetch content
+        if (!folderData.password || passwordVerified) {
+          fetchFolderContent(id!)
+            .then(items => {
+              console.log("Received folder content:", items);
+              setMedia(items);
+              setFilteredMedia(items);
+            })
+            .catch(error => {
+              console.error('Error fetching folder content:', error);
+            })
+            .finally(() => {
+              setLoading(false);
+            });
+        } else {
+          // If password protected, just stop loading
+          setLoading(false);
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching folder details:', error);
+        setLoading(false);
+      });
+  }, [id, passwordVerified]);
+  
+  // Filter media based on search query
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredMedia(media);
+      return;
+    }
+    
+    const lowercaseQuery = searchQuery.toLowerCase();
+    const filtered = media.filter(item => 
+      // Search by ID or type
+      item.id.toLowerCase().includes(lowercaseQuery) || 
+      item.type.toLowerCase().includes(lowercaseQuery)
+    );
+    
+    setFilteredMedia(filtered);
+  }, [searchQuery, media]);
 
   const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
@@ -84,6 +135,38 @@ export default function Folder() {
         });
     }
   };
+  
+  // Handle password verification
+  const handleVerifyPassword = async () => {
+    if (!folder || !id) return;
+    
+    setPasswordError(false);
+    setLoading(true);
+    
+    try {
+      const isVerified = await verifyFolderPassword(id, passwordInput);
+      
+      if (isVerified) {
+        setPasswordVerified(true);
+        // Fetch folder content after successful verification
+        fetchFolderContent(id)
+          .then(items => {
+            setMedia(items);
+            setFilteredMedia(items);
+          })
+          .catch(error => {
+            console.error('Error fetching folder content:', error);
+          });
+      } else {
+        setPasswordError(true);
+      }
+    } catch (error) {
+      console.error('Error verifying password:', error);
+      setPasswordError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const photoCount = media.filter(item => item.type === "photo").length;
   const videoCount = media.filter(item => item.type === "video").length;
@@ -97,6 +180,45 @@ export default function Folder() {
         flexDirection: 'column'
       }}
     >
+      {/* Password Dialog */}
+      <Dialog open={folder?.password !== undefined && !passwordVerified} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Lock color="primary" />
+          Protected Folder
+        </DialogTitle>
+        <DialogContent>
+          {passwordError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              Incorrect password. Please try again.
+            </Alert>
+          )}
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            This folder is password protected. Please enter the password to view its contents.
+          </Typography>
+          <TextField
+            fullWidth
+            label="Password"
+            type="password"
+            value={passwordInput}
+            onChange={(e) => setPasswordInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleVerifyPassword();
+              }
+            }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button component={Link} to="/folders">Go Back</Button>
+          <Button 
+            onClick={handleVerifyPassword} 
+            variant="contained"
+            disabled={loading}
+          >
+            {loading ? <CircularProgress size={24} /> : 'Unlock'}
+          </Button>
+        </DialogActions>
+      </Dialog>
       <Box sx={{ 
         display: 'flex', 
         alignItems: { xs: 'flex-start', sm: 'center' }, 
@@ -143,20 +265,37 @@ export default function Folder() {
           </Box>
         </Box>
         
-        <Button 
-          variant="contained"
-          component="label"
-          startIcon={<CloudUpload />}
-          sx={{ 
-            borderRadius: 2,
-            px: 3,
-            py: 1.2,
-            boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.4)}`
-          }}
-        >
-          Upload Media
-          <input hidden multiple type="file" accept="image/*,video/*" onChange={onUpload} />
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <TextField
+            placeholder="Search files..."
+            size="small"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ width: 200 }}
+          />
+          
+          <Button 
+            variant="contained"
+            component="label"
+            startIcon={<CloudUpload />}
+            sx={{ 
+              borderRadius: 2,
+              px: 3,
+              py: 1.2,
+              boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.4)}`
+            }}
+          >
+            Upload Media
+            <input hidden multiple type="file" accept="image/*,video/*" onChange={onUpload} />
+          </Button>
+        </Box>
       </Box>
       
       {loading ? (
@@ -252,7 +391,7 @@ export default function Folder() {
               </Box>
             </Box>
           )}
-          <MediaGrid items={media} folderId={id} />
+          <MediaGrid items={filteredMedia} folderId={id} />
         </Box>
       )}
     </Box>

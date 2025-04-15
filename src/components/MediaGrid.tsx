@@ -135,35 +135,40 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
                 
                 <CardContent sx={{ 
                   display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center', 
+                  flexDirection: 'column',
                   py: 1,
                   px: 1
                 }}>
-                  <IconButton 
-                    size="small"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      window.open(`http://localhost:3000/api/media/${item.id}/download`, '_blank');
-                    }}
-                    sx={{ padding: 0.5 }}
-                  >
-                    <Download fontSize="small" />
-                  </IconButton>
+                  <Typography variant="body2" noWrap sx={{ mb: 1 }}>
+                    {item.originalFilename || `File_${item.id.substring(0, 8)}`}
+                  </Typography>
                   
-                  {isAdmin && (
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <IconButton 
-                      size="small" 
-                      color="error" 
+                      size="small"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDelete(item.id);
+                        window.open(`http://localhost:3000/api/media/${item.id}/download`, '_blank');
                       }}
                       sx={{ padding: 0.5 }}
                     >
-                      <Delete fontSize="small" />
+                      <Download fontSize="small" />
                     </IconButton>
-                  )}
+                    
+                    {isAdmin && (
+                      <IconButton 
+                        size="small" 
+                        color="error" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(item.id);
+                        }}
+                        sx={{ padding: 0.5 }}
+                      >
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    )}
+                  </Box>
                 </CardContent>
               </Card>
             </Box>

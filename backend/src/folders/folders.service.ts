@@ -27,6 +27,47 @@ export class FoldersService {
     }));
   }
 
+  async findOne(id: string) {
+    this.logger.log(`Finding folder with ID: ${id}`);
+    const folder = await this.prisma.folder.findUnique({
+      where: { id },
+      include: {
+        media: true,
+      },
+    });
+    
+    if (!folder) {
+      this.logger.warn(`Folder not found: ${id}`);
+      return null;
+    }
+    
+    return {
+      ...folder,
+      password: folder.password ? true : undefined, // Only indicate if password exists, don't send actual password
+      mediaCount: folder.media.length,
+    };
+  }
+  
+  async verifyPassword(id: string, password: string) {
+    this.logger.log(`Verifying password for folder: ${id}, ${password}`);
+    
+    const folder = await this.prisma.folder.findUnique({
+      where: { id },
+      select: { password: true },
+    });
+    
+    if (!folder) {
+      this.logger.warn(`Folder not found for password verification: ${id}`);
+      return { verified: false };
+    }
+    
+    // If folder has no password, or password matches
+    const verified = !folder.password || folder.password === password;
+    
+    this.logger.log(`Password verification result: ${verified}`);
+    return { verified };
+  }
+
   async create(data: CreateFolderDto) {
     this.logger.log(`Creating folder: ${JSON.stringify(data)}`);
     return await this.prisma.folder.create({ data });

@@ -250,9 +250,16 @@ export default function MediaViewer({ items, currentIndex, open, onClose }: Medi
             bgcolor: 'rgba(0,0,0,0.7)',
           }}
         >
-          <Typography variant="body2" color="white">
-            {index + 1} / {items.length}
-          </Typography>
+          <Box>
+            <Typography variant="body2" color="white">
+              {index + 1} / {items.length}
+            </Typography>
+            {currentItem.originalFilename && (
+              <Typography variant="body2" color="white" sx={{ opacity: 0.8, mt: 0.5 }}>
+                {currentItem.originalFilename}
+              </Typography>
+            )}
+          </Box>
           
           <Box>
             <Button

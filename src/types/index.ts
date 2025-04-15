@@ -14,6 +14,7 @@ export interface Folder {
     type: "photo" | "video";
     uploadedAt: string;
     uploadedBy: string;
+    originalFilename?: string;
   }
   
   export interface CreateFolderInput {

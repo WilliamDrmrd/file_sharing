@@ -1,11 +1,12 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { Box, AppBar, Toolbar, Typography, IconButton, InputBase, Avatar, useTheme, alpha } from "@mui/material";
-import { Search as SearchIcon, Notifications, Menu as MenuIcon } from "@mui/icons-material";
+import { Box, AppBar, Toolbar, Typography, IconButton, useTheme, alpha } from "@mui/material";
+import { Menu as MenuIcon } from "@mui/icons-material";
 import LeftMenu from "./components/LeftMenu";
 import Folders from "./pages/Folders";
 import Folder from "./pages/Folder";
 import Create from "./pages/Create";
 import Admin from "./pages/Admin";
+import Documentation from "./pages/Documentation";
 
 export default function App() {
   const theme = useTheme();
@@ -38,52 +39,7 @@ export default function App() {
                 <MenuIcon />
               </IconButton>
               
-              <Box sx={{ 
-                position: 'relative',
-                borderRadius: 2,
-                backgroundColor: alpha(theme.palette.common.white, 0.07),
-                '&:hover': {
-                  backgroundColor: alpha(theme.palette.common.white, 0.1),
-                },
-                width: '100%',
-                maxWidth: 400,
-                ml: { xs: 0, md: 2 },
-              }}>
-                <Box sx={{ 
-                  padding: theme.spacing(0, 2),
-                  height: '100%', 
-                  position: 'absolute', 
-                  pointerEvents: 'none', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center'
-                }}>
-                  <SearchIcon sx={{ color: 'text.secondary' }} />
-                </Box>
-                <InputBase
-                  placeholder="Search folders or media…"
-                  sx={{
-                    color: 'inherit',
-                    padding: theme.spacing(1, 1, 1, 0),
-                    paddingLeft: `calc(1em + ${theme.spacing(4)})`,
-                    transition: theme.transitions.create('width'),
-                    width: '100%',
-                    fontSize: '0.875rem'
-                  }}
-                />
-              </Box>
-              
               <Box sx={{ flexGrow: 1 }} />
-              
-              <IconButton sx={{ color: 'text.secondary', mr: 2 }}>
-                <Notifications />
-              </IconButton>
-              
-              <Avatar 
-                alt="User" 
-                src="https://i.pravatar.cc/300" 
-                sx={{ width: 32, height: 32, cursor: 'pointer' }}
-              />
             </Toolbar>
           </AppBar>
           
@@ -99,6 +55,7 @@ export default function App() {
               <Route path="/folders/:id" element={<Folder />} />
               <Route path="/create" element={<Create />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/documentation" element={<Documentation />} />
             </Routes>
           </Box>
         </Box>

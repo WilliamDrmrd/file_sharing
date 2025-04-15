@@ -94,14 +94,18 @@ export default function LeftMenu() {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Check our documentation for tips on using MediaVault.
           </Typography>
-          <Box component="a" href="#" sx={{
-            display: 'inline-block',
-            fontSize: '0.875rem',
-            color: 'primary.main',
-            textDecoration: 'none',
-            fontWeight: 500,
-            '&:hover': { textDecoration: 'underline' }
-          }}>
+          <Box 
+            component={Link} 
+            to="/documentation" 
+            sx={{
+              display: 'inline-block',
+              fontSize: '0.875rem',
+              color: 'primary.main',
+              textDecoration: 'none',
+              fontWeight: 500,
+              '&:hover': { textDecoration: 'underline' }
+            }}
+          >
             View Documentation
           </Box>
         </Box>

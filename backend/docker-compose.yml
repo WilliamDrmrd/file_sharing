@@ -18,6 +18,7 @@ services:
       - "3000:3000"
     environment:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/media_share_db
+      ADMIN_PASSWORD: admin123
     depends_on:
       - postgres
     volumes:

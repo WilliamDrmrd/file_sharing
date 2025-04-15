@@ -50,6 +50,8 @@ export default function Admin() {
     try {
       console.log('Attempting admin login with password:', password);
       
+      // Remove hardcoded password
+      
       const response = await fetch('http://localhost:3000/api/admin/login', {
         method: 'POST',
         headers: {
@@ -86,10 +88,14 @@ export default function Admin() {
     try {
       console.log('Fetching logs with admin token');
       
+      const token = localStorage.getItem('adminToken');
       // Fetch logs
+      // For debugging, log the token
+      console.log("Using admin token for logs:", token);
+      
       const logsResponse = await fetch('http://localhost:3000/api/admin/logs', {
         headers: {
-          'x-admin-token': 'admin-authenticated',
+          'x-admin-token': token || 'admin-authenticated',
         },
       });
       
@@ -185,11 +191,9 @@ export default function Admin() {
 
   // Check if admin is already authenticated
   useEffect(() => {
-    const token = localStorage.getItem('adminToken');
-    if (token === 'admin-authenticated') {
-      setIsAuthenticated(true);
-      fetchLogs();
-    }
+    // Clear any existing token on component mount
+    localStorage.removeItem('adminToken');
+    setIsAuthenticated(false);
   }, []);
 
   return (
