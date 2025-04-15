@@ -3,9 +3,9 @@ import { Folder, Add, AdminPanelSettings, PhotoLibrary, KeyboardArrowRight } fro
 import { Link, useLocation } from "react-router-dom";
 
 const menuItems = [
-  { text: "View Folders", icon: <Folder />, to: "/folders" },
-  { text: "Create Folder", icon: <Add />, to: "/create" },
-  { text: "Admin", icon: <AdminPanelSettings />, to: "/admin" }
+  { text: "Collections", icon: <Folder />, to: "/folders" },
+  { text: "Create Collection", icon: <Add />, to: "/create" },
+  { text: "Organize", icon: <AdminPanelSettings />, to: "/admin" }
 ];
 
 interface LeftMenuProps {
@@ -54,10 +54,10 @@ export default function LeftMenu({ mobileOpen = false, onClose }: LeftMenuProps)
         </Avatar>
         <Box>
           <Typography variant="h6" sx={{ fontWeight: 800, letterSpacing: '-0.5px' }}>
-            MediaVault
+            SnapShare
           </Typography>
           <Typography variant="caption" color="text.secondary" sx={{ opacity: 0.8 }}>
-            Share your media securely
+            Share memories in full quality
           </Typography>
         </Box>
       </Box>
@@ -75,7 +75,7 @@ export default function LeftMenu({ mobileOpen = false, onClose }: LeftMenuProps)
             opacity: 0.6 
           }}
         >
-          MAIN NAVIGATION
+          YOUR MEMORIES
         </Typography>
         <List sx={{ mt: 1 }}>
           {menuItems.map(item => (

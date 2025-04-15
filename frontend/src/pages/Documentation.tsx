@@ -26,12 +26,12 @@ export default function Documentation() {
   return (
     <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
       <Typography variant="h4" sx={{ mb: 3, fontWeight: 700 }}>
-        MediaVault Documentation
+        SnapShare Documentation
       </Typography>
       
       <Typography variant="body1" sx={{ mb: 4 }}>
-        Welcome to MediaVault - a secure way to share and manage media files. 
-        This guide will help you understand how to use the application effectively.
+        Welcome to SnapShare - the perfect way to share high-quality memories with friends. 
+        No compression, no quality loss, just your beautiful photos and videos exactly as they were taken.
       </Typography>
       
       <Paper sx={{ p: 4, mb: 4 }}>
@@ -45,8 +45,8 @@ export default function Documentation() {
               <CreateNewFolder color="primary" />
             </ListItemIcon>
             <ListItemText 
-              primary="Creating Folders" 
-              secondary="Start by creating a folder to organize your media. Click on 'Create Folder' in the left menu and fill out the form with a name and optional password for protection."
+              primary="Creating Shared Collections" 
+              secondary="Start by creating a folder for your trip or event. Click on 'Create Folder' in the left menu and give it a name like 'Summer Trip 2025' or 'Sarah's Wedding'."
             />
           </ListItem>
           
@@ -55,8 +55,8 @@ export default function Documentation() {
               <UploadFile color="primary" />
             </ListItemIcon>
             <ListItemText 
-              primary="Uploading Media" 
-              secondary="Navigate to your folder and use the 'Upload Media' button to select files. You can also drag and drop files directly onto the page."
+              primary="Sharing Your Best Shots" 
+              secondary="Add your photos and videos in their original quality. Just navigate to your folder and use the 'Upload Media' button or drag and drop files directly onto the page. Share the link with your friends so they can add theirs too!"
             />
           </ListItem>
           
@@ -77,12 +77,12 @@ export default function Documentation() {
           <CardContent>
             <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
               <LockOutlined color="primary" />
-              Password Protection
+              Private Group Sharing
             </Typography>
             <Typography variant="body2">
-              When creating a folder, you can set a password to restrict access. 
-              Users will need to enter this password to view the contents of the folder.
-              This provides an extra layer of security for sensitive content.
+              Keep your memories private by optionally adding a password to your folder.
+              Perfect for sharing with just your close friends from a trip or event without making content public.
+              Simply share the password with your group along with the link.
             </Typography>
           </CardContent>
         </Card>
@@ -91,11 +91,12 @@ export default function Documentation() {
           <CardContent>
             <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
               <Download color="primary" />
-              Downloading Files
+              Full Quality Downloads
             </Typography>
             <Typography variant="body2">
-              You can download individual files by clicking the download icon on each media item.
-              You can also download all media in a folder as a ZIP archive using the "Download All" button.
+              Download any photo or video in its original, uncompressed quality by clicking the download icon.
+              Want all the memories from a trip? Just use the "Download All" button to get everything in a ZIP archive.
+              No quality loss like on social media!
             </Typography>
           </CardContent>
         </Card>
@@ -104,17 +105,17 @@ export default function Documentation() {
       <Paper sx={{ p: 4, mb: 4 }}>
         <Typography variant="h5" sx={{ mb: 3, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
           <AdminPanelSettings color="primary" />
-          Admin Functions
+          Event Organizer Tools
         </Typography>
         
         <Alert severity="info" sx={{ mb: 3 }}>
           <Typography variant="body2" sx={{ fontWeight: 500 }}>
-            Important: Only administrators can delete content from the system.
+            Note: Only event organizers (admins) can remove photos to prevent accidental deletions.
           </Typography>
         </Alert>
         
         <Typography variant="body1" sx={{ mb: 3 }}>
-          The admin panel provides special functions for system administrators:
+          For group trip organizers and event hosts, the admin panel provides special functions:
         </Typography>
         
         <List>
@@ -123,8 +124,8 @@ export default function Documentation() {
               <DeleteOutline color="error" />
             </ListItemIcon>
             <ListItemText 
-              primary="Content Deletion" 
-              secondary="Only administrators can delete folders and media. Regular users cannot delete content once uploaded."
+              primary="Memory Management" 
+              secondary="As an event organizer, you can curate the collection by removing duplicates or unwanted images. Only admins can remove content to prevent accidental deletions."
             />
           </ListItem>
           
@@ -133,8 +134,8 @@ export default function Documentation() {
               <AdminPanelSettings color="primary" />
             </ListItemIcon>
             <ListItemText 
-              primary="Activity Logs" 
-              secondary="Admins can view system logs to monitor all activities including folder creation, media uploads, and deletion events."
+              primary="Group Activity" 
+              secondary="See who's contributing to the collection and what's being added. Great for making sure everyone from the trip or event has shared their best shots."
             />
           </ListItem>
         </List>
@@ -142,7 +143,7 @@ export default function Documentation() {
       
       <Paper sx={{ p: 4 }}>
         <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>
-          Tips and Best Practices
+          Tips For Group Sharing
         </Typography>
         
         <Divider sx={{ mb: 3 }} />
@@ -150,29 +151,29 @@ export default function Documentation() {
         <List>
           <ListItem>
             <ListItemText 
-              primary="Organize your content" 
-              secondary="Create separate folders for different types of media or projects to keep your content organized."
+              primary="Create event collections" 
+              secondary="Make a new folder for each trip, wedding, concert, or gathering so memories stay organized by event."
             />
           </ListItem>
           
           <ListItem>
             <ListItemText 
-              primary="Use descriptive names" 
-              secondary="Choose clear, descriptive names for your folders to make them easier to find later."
+              primary="Share with your crew" 
+              secondary="Send the folder link to your friends so everyone can contribute their photos and videos to the same collection."
             />
           </ListItem>
           
           <ListItem>
             <ListItemText 
-              primary="Secure sensitive content" 
-              secondary="Always use password protection for folders containing sensitive or private media."
+              primary="Enjoy full quality" 
+              secondary="Unlike social media, your 4K videos and high-res photos remain exactly as they were captured - perfect for reliving those special moments."
             />
           </ListItem>
           
           <ListItem>
             <ListItemText 
-              primary="Contact an admin" 
-              secondary="If you need to delete content or have issues accessing the system, contact your system administrator."
+              primary="Create memories together" 
+              secondary="The more friends who contribute, the more complete your collection of memories becomes - everyone gets to see perspectives they missed!"
             />
           </ListItem>
         </List>
