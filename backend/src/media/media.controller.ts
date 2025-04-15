@@ -58,7 +58,7 @@ export class MediaController {
     if (!files || files.length === 0) {
       throw new Error('No files uploaded');
     }
-    
+
     this.logger.log(
       `Uploading files to folder ${folderId}: ${files.length} files`,
     );
@@ -73,7 +73,7 @@ export class MediaController {
       const type: 'photo' | 'video' = mime.startsWith('image/') ? 'photo' : 'video';
       const url = `/uploads/${file.filename}`;
       const originalFilename = file.originalname;
-      
+
       return this.mediaService.createWithFilename(
         folderId,
         url,
@@ -82,10 +82,10 @@ export class MediaController {
         originalFilename,
       );
     });
-    
+
     // Wait for all files to be processed
     const results = await Promise.all(mediaPromises);
-    
+
     // Return all created media items
     return results;
   }
@@ -140,29 +140,17 @@ export class SingleMediaController {
         this.logger.warn(`File not found on disk: ${filePath}`);
         throw new Error('File not found on disk');
       }
-
-      // Get extension
-      const ext = extname(filename);
-
-      // Get folder name for the filename
-      const folder = await this.prisma.folder.findUnique({
-        where: { id: media.folderId }
-      });
-      
-      // Use folder name directly
-      const downloadFilename = folder ? `${folder.name}${ext}` : `file${ext}`;
-
       // Set response headers
       res.set({
         'Content-Type': media.type === 'photo' ? 'image/*' : 'video/*',
-        'Content-Disposition': `attachment; filename="${downloadFilename}"`,
+        'Content-Disposition': `attachment; filename="${media.originalFilename}"`,
       });
 
       // Create a read stream from the file
       const fileStream = fs.createReadStream(filePath);
 
       this.logger.log(
-        `Streaming file for download: ${filePath} as ${downloadFilename}`,
+        `Streaming file for download: ${filePath} as ${media.originalFilename}`,
       );
       return new StreamableFile(fileStream);
     } catch (error) {
@@ -237,7 +225,7 @@ export class FolderDownloadController {
             const mediaFolder = await this.prisma.folder.findUnique({
               where: { id: media.folderId }
             });
-            
+
             // Use folder name directly
             let downloadFilename = mediaFolder ? `${mediaFolder.name}${ext}` : `file${ext}`;
 
