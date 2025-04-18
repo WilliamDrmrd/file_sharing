@@ -52,10 +52,12 @@ export default function Admin() {
       
       // Remove hardcoded password
       
-      const response = await fetch('http://localhost:3000/api/admin/login', {
+      const API_BASE_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:3000'}/api`;
+      const response = await fetch(`${API_BASE_URL}/admin/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
         },
         body: JSON.stringify({ password }),
       });
@@ -93,9 +95,11 @@ export default function Admin() {
       // For debugging, log the token
       console.log("Using admin token for logs:", token);
       
-      const logsResponse = await fetch('http://localhost:3000/api/admin/logs', {
+      const API_BASE_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:3000'}/api`;
+      const logsResponse = await fetch(`${API_BASE_URL}/admin/logs`, {
         headers: {
           'x-admin-token': token || 'admin-authenticated',
+          'ngrok-skip-browser-warning': 'true'
         },
       });
       
@@ -126,10 +130,12 @@ export default function Admin() {
       
       if (isAuthenticated) {
         // Use the admin delete endpoint for authenticated users
-        await fetch(`http://localhost:3000/api/admin/folders/${id}`, {
+        const API_BASE_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:3000'}/api`;
+        await fetch(`${API_BASE_URL}/admin/folders/${id}`, {
           method: 'DELETE',
           headers: {
             'x-admin-token': 'admin-authenticated',
+            'ngrok-skip-browser-warning': 'true'
           },
         });
       } else {
@@ -166,10 +172,12 @@ export default function Admin() {
       
       if (isAuthenticated) {
         // Use the admin delete endpoint for authenticated users
-        await fetch(`http://localhost:3000/api/admin/media/${mediaId}`, {
+        const API_BASE_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:3000'}/api`;
+        await fetch(`${API_BASE_URL}/admin/media/${mediaId}`, {
           method: 'DELETE',
           headers: {
             'x-admin-token': 'admin-authenticated',
+            'ngrok-skip-browser-warning': 'true'
           },
         });
       } else {

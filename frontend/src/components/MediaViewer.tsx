@@ -41,7 +41,7 @@ export default function MediaViewer({ items, currentIndex, open, onClose }: Medi
   // Function to get the full URL for a media item
   const getFullUrl = (url: string) => {
     if (url.startsWith('/')) {
-      return `http://localhost:3000${url}`;
+      return `${process.env.REACT_APP_API_URL || 'http://localhost:3000'}${url}`;
     }
     return url;
   };
@@ -106,12 +106,14 @@ export default function MediaViewer({ items, currentIndex, open, onClose }: Medi
       setDownloading(true);
       
       // Create an anchor element and trigger download
-      const downloadUrl = `http://localhost:3000/api/media/${currentItem.id}/download`;
+      const API_BASE_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:3000'}/api`;
+      const downloadUrl = `${API_BASE_URL}/media/${currentItem.id}/download`;
       
       // Create a temporary link element
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.download = ''; // Let the server set the filename
+      link.setAttribute('ngrok-skip-browser-warning', 'true');  // Add ngrok header
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
