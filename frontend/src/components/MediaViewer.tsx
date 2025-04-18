@@ -23,14 +23,15 @@ interface MediaViewerProps {
   currentIndex: number;
   open: boolean;
   onClose: () => void;
+  existingBlobUrls?: {[key: string]: string};
 }
 
-export default function MediaViewer({ items, currentIndex, open, onClose }: MediaViewerProps) {
+export default function MediaViewer({ items, currentIndex, open, onClose, existingBlobUrls = {} }: MediaViewerProps) {
   const [index, setIndex] = useState(currentIndex);
   const [loading, setLoading] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [blobUrls, setBlobUrls] = useState<{[key: string]: string}>({});
+  const [blobUrls, setBlobUrls] = useState<{[key: string]: string}>(existingBlobUrls);
 
   // Reset the index when items or currentIndex changes
   useEffect(() => {
@@ -42,9 +43,6 @@ export default function MediaViewer({ items, currentIndex, open, onClose }: Medi
     // Only run when viewer is open
     if (!open || items.length === 0 || !items[index]) return;
     
-    // Set loading state when navigation happens
-    setLoading(true);
-    
     // Get current item
     const currentItem = items[index];
     
@@ -53,6 +51,9 @@ export default function MediaViewer({ items, currentIndex, open, onClose }: Medi
       setLoading(false);
       return;
     }
+    
+    // Set loading state when navigation happens
+    setLoading(true);
     
     // Track in-progress requests to avoid duplicates
     const pendingRequests = new Map<string, Promise<string | null>>();
@@ -93,14 +94,16 @@ export default function MediaViewer({ items, currentIndex, open, onClose }: Medi
     // Load current item first, then adjacent items
     const loadItems = async () => {
       try {
-        // Always load current item first for best UX
-        const currentItemUrl = await fetchMediaItem(currentItem);
-        
-        if (currentItemUrl) {
-          setBlobUrls(prev => ({
-            ...prev,
-            [currentItem.id]: currentItemUrl
-          }));
+        // If we don't have the current item, load it
+        if (!blobUrls[currentItem.id]) {
+          const currentItemUrl = await fetchMediaItem(currentItem);
+          
+          if (currentItemUrl) {
+            setBlobUrls(prev => ({
+              ...prev,
+              [currentItem.id]: currentItemUrl
+            }));
+          }
         }
         
         // Clear loading state for current item
@@ -148,7 +151,7 @@ export default function MediaViewer({ items, currentIndex, open, onClose }: Medi
     
     // No cleanup needed here - we'll handle cleanup when viewer closes
     return () => {};
-  }, [items, open, index]);
+  }, [items, open, index, blobUrls]);
   
   // Cleanup URLs when closing viewer
   useEffect(() => {

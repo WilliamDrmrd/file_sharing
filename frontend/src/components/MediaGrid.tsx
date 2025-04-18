@@ -451,6 +451,7 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
         currentIndex={currentMediaIndex}
         open={viewerOpen}
         onClose={() => setViewerOpen(false)}
+        existingBlobUrls={blobUrls}
       />
     </>
   );
