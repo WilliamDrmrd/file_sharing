@@ -446,13 +446,28 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
       )}
 
       {/* Media viewer dialog */}
-      <MediaViewer
-        items={currentItems}
-        currentIndex={currentMediaIndex}
-        open={viewerOpen}
-        onClose={() => setViewerOpen(false)}
-        existingBlobUrls={blobUrls}
-      />
+      {viewerOpen && (
+        <MediaViewer
+          items={currentItems}
+          currentIndex={currentMediaIndex}
+          open={viewerOpen}
+          onClose={() => setViewerOpen(false)}
+          existingBlobUrls={blobUrls}
+          onUpdateBlobUrls={(newBlobUrls) => {
+            // Use a function form of setState to avoid dependency on current blobUrls
+            // This prevents infinite render loops
+            setBlobUrls(prev => {
+              // Check if there are any actual changes
+              const hasChanges = Object.entries(newBlobUrls).some(
+                ([id, url]) => prev[id] !== url && url !== null && url !== undefined
+              );
+              
+              // Only update state if there are new URLs
+              return hasChanges ? {...prev, ...newBlobUrls} : prev;
+            });
+          }}
+        />
+      )}
     </>
   );
 }

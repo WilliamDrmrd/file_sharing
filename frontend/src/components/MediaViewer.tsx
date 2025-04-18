@@ -24,9 +24,10 @@ interface MediaViewerProps {
   open: boolean;
   onClose: () => void;
   existingBlobUrls?: {[key: string]: string};
+  onUpdateBlobUrls?: (urls: {[key: string]: string}) => void;
 }
 
-export default function MediaViewer({ items, currentIndex, open, onClose, existingBlobUrls = {} }: MediaViewerProps) {
+export default function MediaViewer({ items, currentIndex, open, onClose, existingBlobUrls = {}, onUpdateBlobUrls }: MediaViewerProps) {
   const [index, setIndex] = useState(currentIndex);
   const [loading, setLoading] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
@@ -46,8 +47,8 @@ export default function MediaViewer({ items, currentIndex, open, onClose, existi
     // Get current item
     const currentItem = items[index];
     
-    // If we already have this item loaded in blob URL state, just clear loading
-    if (blobUrls[currentItem.id]) {
+    // If we already have this item loaded in either blob URL state or from existingBlobUrls, just clear loading
+    if (blobUrls[currentItem.id] || existingBlobUrls[currentItem.id]) {
       setLoading(false);
       return;
     }
@@ -95,7 +96,7 @@ export default function MediaViewer({ items, currentIndex, open, onClose, existi
     const loadItems = async () => {
       try {
         // If we don't have the current item, load it
-        if (!blobUrls[currentItem.id]) {
+        if (!blobUrls[currentItem.id] && !existingBlobUrls[currentItem.id]) {
           const currentItemUrl = await fetchMediaItem(currentItem);
           
           if (currentItemUrl) {
@@ -115,13 +116,13 @@ export default function MediaViewer({ items, currentIndex, open, onClose, existi
         // Next item
         if (index < items.length - 1) {
           const nextItem = items[index + 1];
-          if (!blobUrls[nextItem.id]) adjacentItems.push(nextItem);
+          if (!blobUrls[nextItem.id] && !existingBlobUrls[nextItem.id]) adjacentItems.push(nextItem);
         }
         
         // Previous item
         if (index > 0) {
           const prevItem = items[index - 1];
-          if (!blobUrls[prevItem.id]) adjacentItems.push(prevItem);
+          if (!blobUrls[prevItem.id] && !existingBlobUrls[prevItem.id]) adjacentItems.push(prevItem);
         }
         
         // Load adjacent items in parallel
@@ -151,20 +152,28 @@ export default function MediaViewer({ items, currentIndex, open, onClose, existi
     
     // No cleanup needed here - we'll handle cleanup when viewer closes
     return () => {};
-  }, [items, open, index, blobUrls]);
+  }, [items, open, index, blobUrls, existingBlobUrls]);
   
-  // Cleanup URLs when closing viewer
+  // Handle callback when viewer is closed
+  const previousOpenRef = React.useRef(open);
+  
   useEffect(() => {
-    if (!open) {
-      // When viewer is closed, keep URLs in memory for potential reuse
-      // We'll clean them up when component unmounts instead
+    // Only run when the viewer is being closed (was open, now closed)
+    if (previousOpenRef.current && !open && onUpdateBlobUrls) {
+      // When closing, pass all blob URLs back to the parent
+      onUpdateBlobUrls({...blobUrls});
     }
     
+    // Update ref for next render
+    previousOpenRef.current = open;
+    
+    // Component unmount cleanup
     return () => {
-      // Clean up all blob URLs when component unmounts
-      Object.values(blobUrls).forEach(url => URL.revokeObjectURL(url));
+      // We're not going to revoke blob URLs here anymore
+      // Instead, we'll let the parent component (MediaGrid) manage their lifecycle
     };
-  }, [open]);
+  }, [open, onUpdateBlobUrls]);
+  // Intentionally NOT including blobUrls in deps to avoid update loops
 
   const currentItem = items[index];
 
@@ -176,8 +185,8 @@ export default function MediaViewer({ items, currentIndex, open, onClose, existi
     return url;
   };
 
-  // Only use blob URLs to prevent multiple requests
-  const mediaSrc = blobUrls[currentItem?.id];
+  // Ensure we have a valid blob URL for the current item
+  const mediaSrc = blobUrls[currentItem?.id] || existingBlobUrls[currentItem?.id];
 
   // Navigation functions
   const goToPrevious = (e: React.MouseEvent) => {
