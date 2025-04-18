@@ -23,91 +23,108 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
     setCurrentItems(items);
   }, [items]);
 
-  // This effect initializes the loading states when items change
+  // Single effect to manage media loading
   useEffect(() => {
-    // Mark all items as loading initially
+    if (currentItems.length === 0) return;
+    
+    // Set all items to loading state initially
     const newLoadingItems = currentItems.reduce((acc, item) => {
       acc[item.id] = true;
       return acc;
     }, {} as {[key: string]: boolean});
-    
     setLoadingItems(newLoadingItems);
-  }, [currentItems]);
-  
-  // This effect handles media loading
-  useEffect(() => {
-    if (currentItems.length === 0) return;
     
-    // Simple array to track which items are still loading
-    let loading = [...currentItems];
+    // We'll keep track of which requests are in progress to avoid duplicates
+    const pendingRequests = new Map<string, Promise<string | null>>();
     
     // Function to fetch a single item
-    const fetchItem = async (item: MediaItem) => {
-      try {
-        // Always use headers with ngrok-skip-browser-warning
-        const response = await fetch(getFullUrl(item.url), {
-          headers: { 'ngrok-skip-browser-warning': 'true' },
+    const fetchItem = async (item: MediaItem): Promise<string | null> => {
+      // Check if this item is already being fetched
+      if (pendingRequests.has(item.id)) {
+        return pendingRequests.get(item.id) as Promise<string | null>;
+      }
+      
+      // Start a new fetch request
+      const fetchPromise = (async () => {
+        try {
+          // Always use headers with ngrok-skip-browser-warning
+          const response = await fetch(getFullUrl(item.url), {
+            headers: { 'ngrok-skip-browser-warning': 'true' },
+          });
+          
+          if (!response.ok) {
+            throw new Error(`HTTP error ${response.status}`);
+          }
+          
+          // Get the media as a blob
+          const blob = await response.blob();
+          
+          // Create a blob URL that can be used directly by img/video tags
+          const blobUrl = URL.createObjectURL(blob);
+          return blobUrl;
+        } catch (error) {
+          console.error(`Error loading media ${item.id}:`, error);
+          return null;
+        } finally {
+          // Remove from pending requests when done
+          pendingRequests.delete(item.id);
+        }
+      })();
+      
+      // Store the promise so we don't start duplicate requests
+      pendingRequests.set(item.id, fetchPromise);
+      return fetchPromise;
+    };
+    
+    // Process items in batches to avoid overwhelming the browser
+    const processInBatches = async () => {
+      const batchSize = 3; // Load 3 items at a time
+      const newBlobUrls: {[key: string]: string} = {...blobUrls};
+      
+      // Process in batches
+      for (let i = 0; i < currentItems.length; i += batchSize) {
+        const batchItems = currentItems.slice(i, i + batchSize);
+        
+        // Process this batch in parallel
+        const results = await Promise.all(
+          batchItems.map(async (item) => {
+            // Skip if we already have this URL
+            if (blobUrls[item.id]) {
+              setLoadingItems(prev => ({...prev, [item.id]: false}));
+              return [item.id, blobUrls[item.id]];
+            }
+            
+            const blobUrl = await fetchItem(item);
+            
+            // Update loading state regardless of success/failure
+            setLoadingItems(prev => ({...prev, [item.id]: false}));
+            
+            return [item.id, blobUrl];
+          })
+        );
+        
+        // Update blob URLs with results from this batch
+        results.forEach(([id, url]) => {
+          if (id && url) newBlobUrls[id as string] = url as string;
         });
         
-        if (!response.ok) {
-          throw new Error(`HTTP error ${response.status}`);
-        }
-        
-        // Get the media as a blob
-        const blob = await response.blob();
-        
-        // Create a blob URL that can be used directly by img/video tags
-        const blobUrl = URL.createObjectURL(blob);
-        
-        // Update our state
-        setBlobUrls(prevUrls => ({
-          ...prevUrls,
-          [item.id]: blobUrl
-        }));
-        
-        // Item is no longer loading
-        setLoadingItems(prev => ({
-          ...prev,
-          [item.id]: false
-        }));
-        
-      } catch (error) {
-        console.error(`Error loading media ${item.id}:`, error);
-        
-        // Even with error, mark as not loading to avoid eternal spinner
-        setLoadingItems(prev => ({
-          ...prev,
-          [item.id]: false
-        }));
+        // Update our state after each batch
+        setBlobUrls({...newBlobUrls});
       }
     };
     
-    // Simplified approach - fetch items with limited concurrency
-    const fetchWithConcurrencyLimit = async () => {
-      // Process items in batches of 4 for better performance
-      const batchSize = 4;
-      
-      // Create batches of items
-      const batches = [];
-      for (let i = 0; i < currentItems.length; i += batchSize) {
-        batches.push(currentItems.slice(i, i + batchSize));
-      }
-      
-      // Process each batch sequentially
-      for (const batch of batches) {
-        // Process items in the current batch in parallel
-        await Promise.all(batch.map(item => fetchItem(item)));
-      }
-    };
-    
-    // Start fetching
-    fetchWithConcurrencyLimit().catch(error => {
-      console.error("Error in media fetching:", error);
-    });
+    // Start processing
+    processInBatches();
     
     // Clean up when unmounting or when items change
     return () => {
-      Object.values(blobUrls).forEach(url => URL.revokeObjectURL(url));
+      // Only revoke URLs that are no longer needed
+      const currentIds = new Set(currentItems.map(item => item.id));
+      Object.entries(blobUrls).forEach(([id, url]) => {
+        if (!currentIds.has(id)) {
+          URL.revokeObjectURL(url);
+        }
+      });
     };
   }, [currentItems]);
 
@@ -180,7 +197,7 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
 
         <Box sx={{ display: 'flex', flexWrap: 'wrap', margin: { xs: -0.5, sm: -0.75, md: -1.5 }, mt: 2 }}>
           {currentItems.map((item, index) => {
-            const mediaSrc = blobUrls[item.id] || getFullUrl(item.url);
+            // We only use blob URLs now to prevent duplicate requests
             const isImage = item.type === "photo";
 
             return (
@@ -221,10 +238,12 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
                           />
                       )}
 
-                      {isImage ? (
+                      {/* Only render media when we have blob URL ready or if loading failed */}
+                      {(blobUrls[item.id] || loadingItems[item.id] === false) && (
+                        isImage ? (
                           <CardMedia
                               component="img"
-                              image={mediaSrc}
+                              src={blobUrls[item.id]}
                               alt={item.originalFilename || "Photo"}
                               sx={{
                                 height: { xs: 140, sm: 160, md: 200 },
@@ -233,10 +252,10 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
                               }}
                               onLoad={() => handleImageLoad(item.id)}
                           />
-                      ) : (
+                        ) : (
                           <CardMedia
                               component="video"
-                              src={mediaSrc}
+                              src={blobUrls[item.id]}
                               preload="metadata"
                               muted
                               sx={{
@@ -246,6 +265,7 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
                               }}
                               onLoadedMetadata={() => handleImageLoad(item.id)}
                           />
+                        )
                       )}
 
                       {/* Type indicator */}

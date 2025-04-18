@@ -37,7 +37,7 @@ export default function MediaViewer({ items, currentIndex, open, onClose }: Medi
     setIndex(currentIndex);
   }, [currentIndex, items]);
 
-  // Simpler, more reliable media loading approach
+  // Handle media loading when the view needs to display an item
   useEffect(() => {
     // Only run when viewer is open
     if (!open || items.length === 0 || !items[index]) return;
@@ -45,105 +45,116 @@ export default function MediaViewer({ items, currentIndex, open, onClose }: Medi
     // Set loading state when navigation happens
     setLoading(true);
     
-    // Current item is the one we need to load right now
+    // Get current item
     const currentItem = items[index];
     
-    // If we already have this item loaded as a blob, just use it
+    // If we already have this item loaded in blob URL state, just clear loading
     if (blobUrls[currentItem.id]) {
       setLoading(false);
       return;
     }
     
-    // Otherwise, fetch the current item
-    const fetchCurrentItem = async () => {
-      try {
-        const response = await fetch(getFullUrl(currentItem.url), {
-          headers: { 'ngrok-skip-browser-warning': 'true' },
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch media: ${response.statusText}`);
-        }
-        
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        
-        // Update our blob URLs state
-        setBlobUrls(prev => ({
-          ...prev,
-          [currentItem.id]: blobUrl
-        }));
-        
-        // After successful load, fetch adjacent items for smoother navigation
-        fetchAdjacentItems();
-      } catch (error) {
-        console.error(`Error fetching current item (${currentItem.id}):`, error);
-      } finally {
-        // Always clear loading state after trying to load the current item
-        setLoading(false);
-      }
-    };
+    // Track in-progress requests to avoid duplicates
+    const pendingRequests = new Map<string, Promise<string | null>>();
     
-    // Function to preload adjacent items after current item loaded
-    const fetchAdjacentItems = async () => {
-      // Determine which adjacent items to load
-      const adjacentItems: MediaItem[] = [];
-      
-      // Next item
-      if (index < items.length - 1) {
-        const nextItem = items[index + 1];
-        if (!blobUrls[nextItem.id]) {
-          adjacentItems.push(nextItem);
-        }
+    // Function to fetch a media item
+    const fetchMediaItem = async (item: MediaItem): Promise<string | null> => {
+      // Avoid duplicate requests
+      if (pendingRequests.has(item.id)) {
+        return pendingRequests.get(item.id) as Promise<string | null>;
       }
       
-      // Previous item
-      if (index > 0) {
-        const prevItem = items[index - 1];
-        if (!blobUrls[prevItem.id]) {
-          adjacentItems.push(prevItem);
-        }
-      }
-      
-      // If we have adjacent items to fetch, load them one by one
-      for (const item of adjacentItems) {
+      // Create and store the promise
+      const fetchPromise = (async () => {
         try {
           const response = await fetch(getFullUrl(item.url), {
             headers: { 'ngrok-skip-browser-warning': 'true' },
           });
           
-          if (!response.ok) continue; // Skip if error
+          if (!response.ok) {
+            throw new Error(`Failed to fetch media: ${response.statusText}`);
+          }
           
           const blob = await response.blob();
           const blobUrl = URL.createObjectURL(blob);
-          
-          // Update our blob URLs state
+          return blobUrl;
+        } catch (error) {
+          console.error(`Error fetching item (${item.id}):`, error);
+          return null;
+        } finally {
+          pendingRequests.delete(item.id);
+        }
+      })();
+      
+      pendingRequests.set(item.id, fetchPromise);
+      return fetchPromise;
+    };
+    
+    // Load current item first, then adjacent items
+    const loadItems = async () => {
+      try {
+        // Always load current item first for best UX
+        const currentItemUrl = await fetchMediaItem(currentItem);
+        
+        if (currentItemUrl) {
           setBlobUrls(prev => ({
             ...prev,
-            [item.id]: blobUrl
+            [currentItem.id]: currentItemUrl
           }));
-        } catch (error) {
-          // Ignore errors for preloaded items
-          console.error(`Error preloading item (${item.id}):`, error);
         }
+        
+        // Clear loading state for current item
+        setLoading(false);
+        
+        // Preload adjacent items for smooth navigation
+        const adjacentItems: MediaItem[] = [];
+        
+        // Next item
+        if (index < items.length - 1) {
+          const nextItem = items[index + 1];
+          if (!blobUrls[nextItem.id]) adjacentItems.push(nextItem);
+        }
+        
+        // Previous item
+        if (index > 0) {
+          const prevItem = items[index - 1];
+          if (!blobUrls[prevItem.id]) adjacentItems.push(prevItem);
+        }
+        
+        // Load adjacent items in parallel
+        if (adjacentItems.length > 0) {
+          const adjacentPromises = adjacentItems.map(async (item) => {
+            const itemUrl = await fetchMediaItem(item);
+            if (itemUrl) {
+              setBlobUrls(prev => ({
+                ...prev,
+                [item.id]: itemUrl
+              }));
+            }
+          });
+          
+          // We don't need to await these - they can load in background
+          Promise.all(adjacentPromises).catch(err => {
+            console.error("Error preloading adjacent items:", err);
+          });
+        }
+      } catch (error) {
+        console.error("Error loading media items:", error);
+        setLoading(false);
       }
     };
     
-    // Start loading current item
-    fetchCurrentItem();
+    loadItems();
     
-    // Cleanup function
-    return () => {
-      // No need to clear blob URLs here - we'll keep them for the session
-    };
+    // No cleanup needed here - we'll handle cleanup when viewer closes
+    return () => {};
   }, [items, open, index]);
   
-  // Cleanup blob URLs when viewer is closed or component is unmounted
+  // Cleanup URLs when closing viewer
   useEffect(() => {
     if (!open) {
-      // Clear old blob URLs when viewer is closed
-      Object.values(blobUrls).forEach(url => URL.revokeObjectURL(url));
-      setBlobUrls({});
+      // When viewer is closed, keep URLs in memory for potential reuse
+      // We'll clean them up when component unmounts instead
     }
     
     return () => {
@@ -162,7 +173,8 @@ export default function MediaViewer({ items, currentIndex, open, onClose }: Medi
     return url;
   };
 
-  const mediaSrc = blobUrls[currentItem?.id] || getFullUrl(currentItem?.url);
+  // Only use blob URLs to prevent multiple requests
+  const mediaSrc = blobUrls[currentItem?.id];
 
   // Navigation functions
   const goToPrevious = (e: React.MouseEvent) => {
@@ -292,7 +304,9 @@ export default function MediaViewer({ items, currentIndex, open, onClose }: Medi
                 />
             )}
 
-            {currentItem.type === 'photo' ? (
+            {/* Only show media once blob URL is ready */}
+            {mediaSrc && (
+              currentItem.type === 'photo' ? (
                 <img
                     src={mediaSrc}
                     alt="Media preview"
@@ -305,7 +319,7 @@ export default function MediaViewer({ items, currentIndex, open, onClose }: Medi
                     }}
                     onLoad={handleMediaLoaded}
                 />
-            ) : (
+              ) : (
                 <video
                     src={mediaSrc}
                     controls
@@ -319,6 +333,7 @@ export default function MediaViewer({ items, currentIndex, open, onClose }: Medi
                     }}
                     onLoadedMetadata={handleMediaLoaded}
                 />
+              )
             )}
 
             {/* Navigation buttons */}
