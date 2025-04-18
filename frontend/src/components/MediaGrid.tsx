@@ -23,38 +23,89 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
     setCurrentItems(items);
   }, [items]);
 
+  // This effect initializes the loading states when items change
   useEffect(() => {
-    const fetchMedia = async () => {
-      const urls = await Promise.all(
-          currentItems.map(async (item) => {
-            try {
-              const response = await fetch(getFullUrl(item.url), {
-                headers: { 'ngrok-skip-browser-warning': 'true' },
-              });
-              if (!response.ok) {
-                throw new Error(`Failed to fetch media: ${response.statusText}`);
-              }
-              const blob = await response.blob();
-              const blobUrl = URL.createObjectURL(blob);
-              return [item.id, blobUrl];
-            } catch (error) {
-              console.error(`Error fetching media for ${item.id}:`, error);
-              return [item.id, null];
-            }
-          })
-      );
-
-      const newBlobUrls = urls.reduce((acc, [id, url]) => {
-        if (!id) return acc;
-        if (url) acc[id] = url;
-        return acc;
-      }, {} as {[key: string]: string});
-
-      setBlobUrls(newBlobUrls);
+    // Mark all items as loading initially
+    const newLoadingItems = currentItems.reduce((acc, item) => {
+      acc[item.id] = true;
+      return acc;
+    }, {} as {[key: string]: boolean});
+    
+    setLoadingItems(newLoadingItems);
+  }, [currentItems]);
+  
+  // This effect handles media loading
+  useEffect(() => {
+    if (currentItems.length === 0) return;
+    
+    // Simple array to track which items are still loading
+    let loading = [...currentItems];
+    
+    // Function to fetch a single item
+    const fetchItem = async (item: MediaItem) => {
+      try {
+        // Always use headers with ngrok-skip-browser-warning
+        const response = await fetch(getFullUrl(item.url), {
+          headers: { 'ngrok-skip-browser-warning': 'true' },
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error ${response.status}`);
+        }
+        
+        // Get the media as a blob
+        const blob = await response.blob();
+        
+        // Create a blob URL that can be used directly by img/video tags
+        const blobUrl = URL.createObjectURL(blob);
+        
+        // Update our state
+        setBlobUrls(prevUrls => ({
+          ...prevUrls,
+          [item.id]: blobUrl
+        }));
+        
+        // Item is no longer loading
+        setLoadingItems(prev => ({
+          ...prev,
+          [item.id]: false
+        }));
+        
+      } catch (error) {
+        console.error(`Error loading media ${item.id}:`, error);
+        
+        // Even with error, mark as not loading to avoid eternal spinner
+        setLoadingItems(prev => ({
+          ...prev,
+          [item.id]: false
+        }));
+      }
     };
-
-    fetchMedia();
-
+    
+    // Simplified approach - fetch items with limited concurrency
+    const fetchWithConcurrencyLimit = async () => {
+      // Process items in batches of 4 for better performance
+      const batchSize = 4;
+      
+      // Create batches of items
+      const batches = [];
+      for (let i = 0; i < currentItems.length; i += batchSize) {
+        batches.push(currentItems.slice(i, i + batchSize));
+      }
+      
+      // Process each batch sequentially
+      for (const batch of batches) {
+        // Process items in the current batch in parallel
+        await Promise.all(batch.map(item => fetchItem(item)));
+      }
+    };
+    
+    // Start fetching
+    fetchWithConcurrencyLimit().catch(error => {
+      console.error("Error in media fetching:", error);
+    });
+    
+    // Clean up when unmounting or when items change
     return () => {
       Object.values(blobUrls).forEach(url => URL.revokeObjectURL(url));
     };
@@ -186,12 +237,14 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
                           <CardMedia
                               component="video"
                               src={mediaSrc}
+                              preload="metadata"
+                              muted
                               sx={{
                                 height: { xs: 140, sm: 160, md: 200 },
                                 objectFit: "cover",
                                 transition: 'transform 0.3s ease',
                               }}
-                              onLoadedData={() => handleImageLoad(item.id)}
+                              onLoadedMetadata={() => handleImageLoad(item.id)}
                           />
                       )}
 
