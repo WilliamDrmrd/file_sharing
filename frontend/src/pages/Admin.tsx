@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Button, 
-  List, 
-  ListItem, 
-  ListItemText, 
+import React, { useState, useEffect } from "react";
+import {
+  Box,
+  Typography,
+  Button,
+  List,
+  ListItem,
+  ListItemText,
   Collapse,
   Paper,
   TextField,
@@ -18,8 +18,8 @@ import {
   CircularProgress,
   Alert,
   Tabs,
-  Tab
-} from '@mui/material';
+  Tab,
+} from "@mui/material";
 import { useFolders } from "../hooks/useFolders";
 import { deleteFolder, deleteMedia, fetchFolderContent } from "../api/mediaApi";
 
@@ -29,124 +29,130 @@ interface LogEntry {
   details: string | null;
   entityId: string | null;
   createdAt: string;
-  level: 'info' | 'warn' | 'error';
+  level: "info" | "warn" | "error";
 }
 
 export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState(0);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const { folders, loading: foldersLoading } = useFolders();
   const [openIds, setOpenIds] = useState<{ [folderId: string]: boolean }>({});
-  const [folderContents, setFolderContents] = useState<{ [folderId: string]: any[] }>({});
+  const [folderContents, setFolderContents] = useState<{
+    [folderId: string]: any[];
+  }>({});
 
   const handleLogin = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
-      console.log('Attempting admin login with password:', password);
-      
+      console.log("Attempting admin login with password:", password);
+
       // Remove hardcoded password
-      
-      const API_BASE_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:3000'}/api`;
+
+      const API_BASE_URL = `${process.env.REACT_APP_API_URL || "http://localhost:3000"}/api`;
       const response = await fetch(`${API_BASE_URL}/admin/login`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true'
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
         },
         body: JSON.stringify({ password }),
       });
-      
-      console.log('Login response status:', response.status);
-      
+
+      console.log("Login response status:", response.status);
+
       if (!response.ok) {
-        throw new Error('Invalid password');
+        throw new Error("Invalid password");
       }
-      
+
       const data = await response.json();
-      console.log('Login response data:', data);
-      
-      localStorage.setItem('adminToken', data.token);
+      console.log("Login response data:", data);
+
+      localStorage.setItem("adminToken", data.token);
       setIsAuthenticated(true);
-      
+
       // Load initial data
       fetchLogs();
     } catch (error) {
-      console.error('Login error:', error);
-      setError('Invalid password. Please try again.');
+      console.error("Login error:", error);
+      setError("Invalid password. Please try again.");
     } finally {
       setLoading(false);
     }
   };
-  
+
   const fetchLogs = async () => {
     setLoading(true);
-    
+
     try {
-      console.log('Fetching logs with admin token');
-      
-      const token = localStorage.getItem('adminToken');
+      console.log("Fetching logs with admin token");
+
+      const token = localStorage.getItem("adminToken");
       // Fetch logs
       // For debugging, log the token
       console.log("Using admin token for logs:", token);
-      
-      const API_BASE_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:3000'}/api`;
+
+      const API_BASE_URL = `${process.env.REACT_APP_API_URL || "http://localhost:3000"}/api`;
       const logsResponse = await fetch(`${API_BASE_URL}/admin/logs`, {
         headers: {
-          'x-admin-token': token || 'admin-authenticated',
-          'ngrok-skip-browser-warning': 'true'
+          "x-admin-token": token || "admin-authenticated",
+          "ngrok-skip-browser-warning": "true",
         },
       });
-      
-      console.log('Logs response status:', logsResponse.status);
-      
+
+      console.log("Logs response status:", logsResponse.status);
+
       if (!logsResponse.ok) {
-        throw new Error('Failed to fetch logs');
+        throw new Error("Failed to fetch logs");
       }
-      
+
       const logsData = await logsResponse.json();
-      console.log('Logs data:', logsData);
+      console.log("Logs data:", logsData);
       setLogs(logsData);
     } catch (error) {
-      console.error('Error fetching logs:', error);
-      setError('Failed to load logs');
+      console.error("Error fetching logs:", error);
+      setError("Failed to load logs");
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteFolder = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this folder and all its contents?')) {
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this folder and all its contents?",
+      )
+    ) {
       return;
     }
-    
+
     try {
       setLoading(true);
-      
+
       if (isAuthenticated) {
         // Use the admin delete endpoint for authenticated users
-        const API_BASE_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:3000'}/api`;
+        const API_BASE_URL = `${process.env.REACT_APP_API_URL || "http://localhost:3000"}/api`;
         await fetch(`${API_BASE_URL}/admin/folders/${id}`, {
-          method: 'DELETE',
+          method: "DELETE",
           headers: {
-            'x-admin-token': 'admin-authenticated',
-            'ngrok-skip-browser-warning': 'true'
+            "x-admin-token": "admin-authenticated",
+            "ngrok-skip-browser-warning": "true",
           },
         });
       } else {
         // Use the regular delete endpoint
         await deleteFolder(id);
       }
-      
+
       window.location.reload();
     } catch (error) {
-      console.error('Error deleting folder:', error);
-      setError('Failed to delete folder');
+      console.error("Error deleting folder:", error);
+      setError("Failed to delete folder");
     } finally {
       setLoading(false);
     }
@@ -163,35 +169,35 @@ export default function Admin() {
   };
 
   const handleDeleteMedia = async (mediaId: string, folderId: string) => {
-    if (!window.confirm('Are you sure you want to delete this media?')) {
+    if (!window.confirm("Are you sure you want to delete this media?")) {
       return;
     }
-    
+
     try {
       setLoading(true);
-      
+
       if (isAuthenticated) {
         // Use the admin delete endpoint for authenticated users
-        const API_BASE_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:3000'}/api`;
+        const API_BASE_URL = `${process.env.REACT_APP_API_URL || "http://localhost:3000"}/api`;
         await fetch(`${API_BASE_URL}/admin/media/${mediaId}`, {
-          method: 'DELETE',
+          method: "DELETE",
           headers: {
-            'x-admin-token': 'admin-authenticated',
-            'ngrok-skip-browser-warning': 'true'
+            "x-admin-token": "admin-authenticated",
+            "ngrok-skip-browser-warning": "true",
           },
         });
       } else {
         // Use the regular delete endpoint
         await deleteMedia(mediaId);
       }
-      
+
       setFolderContents((prev) => ({
         ...prev,
-        [folderId]: prev[folderId].filter((m: any) => m.id !== mediaId)
+        [folderId]: prev[folderId].filter((m: any) => m.id !== mediaId),
       }));
     } catch (error) {
-      console.error('Error deleting media:', error);
-      setError('Failed to delete media');
+      console.error("Error deleting media:", error);
+      setError("Failed to delete media");
     } finally {
       setLoading(false);
     }
@@ -200,28 +206,28 @@ export default function Admin() {
   // Check if admin is already authenticated
   useEffect(() => {
     // Clear any existing token on component mount
-    localStorage.removeItem('adminToken');
+    localStorage.removeItem("adminToken");
     setIsAuthenticated(false);
   }, []);
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
+    <Box sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>
       <Typography variant="h4" sx={{ mb: 4, fontWeight: 700 }}>
         Admin Panel
       </Typography>
-      
+
       {!isAuthenticated ? (
-        <Paper sx={{ p: 4, maxWidth: 400, mx: 'auto' }}>
+        <Paper sx={{ p: 4, maxWidth: 400, mx: "auto" }}>
           <Typography variant="h6" sx={{ mb: 3 }}>
             Admin Login
           </Typography>
-          
+
           {error && (
             <Alert severity="error" sx={{ mb: 3 }}>
               {error}
             </Alert>
           )}
-          
+
           <TextField
             label="Admin Password"
             type="password"
@@ -230,19 +236,19 @@ export default function Admin() {
             onChange={(e) => setPassword(e.target.value)}
             sx={{ mb: 3 }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
+              if (e.key === "Enter") {
                 handleLogin();
               }
             }}
           />
-          
-          <Button 
-            variant="contained" 
-            onClick={handleLogin} 
+
+          <Button
+            variant="contained"
+            onClick={handleLogin}
             disabled={loading}
             fullWidth
           >
-            {loading ? <CircularProgress size={24} /> : 'Login'}
+            {loading ? <CircularProgress size={24} /> : "Login"}
           </Button>
         </Paper>
       ) : (
@@ -252,29 +258,32 @@ export default function Admin() {
               {error}
             </Alert>
           )}
-          
+
           <Paper>
             <Tabs value={tab} onChange={(_, newValue) => setTab(newValue)}>
               <Tab label="Folders" />
               <Tab label="Logs" />
             </Tabs>
-            
+
             <Divider />
-            
+
             <Box sx={{ p: 3 }}>
               {loading || foldersLoading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
                   <CircularProgress />
                 </Box>
               ) : tab === 0 ? (
                 // Folders tab
                 <List>
-                  {folders.map(folder => (
+                  {folders.map((folder) => (
                     <Box key={folder.id} mb={2}>
                       <ListItem
                         secondaryAction={
                           <>
-                            <Button color="error" onClick={() => handleDeleteFolder(folder.id)}>
+                            <Button
+                              color="error"
+                              onClick={() => handleDeleteFolder(folder.id)}
+                            >
                               Delete Folder
                             </Button>
                             <Button onClick={() => handleShowMedia(folder.id)}>
@@ -283,26 +292,48 @@ export default function Admin() {
                           </>
                         }
                       >
-                        <ListItemText primary={folder.name} secondary={`By ${folder.createdBy}`} />
+                        <ListItemText
+                          primary={folder.name}
+                          secondary={`By ${folder.createdBy}`}
+                        />
                       </ListItem>
-                      <Collapse in={openIds[folder.id]} timeout="auto" unmountOnExit>
+                      <Collapse
+                        in={openIds[folder.id]}
+                        timeout="auto"
+                        unmountOnExit
+                      >
                         <List component="div" disablePadding>
-                          {(folderContents[folder.id] || []).map((media: any) => (
-                            <ListItem key={media.id} sx={{ pl: 4 }}>
-                              <ListItemText
-                                primary={media.type === "photo" ? "Photo" : "Video"}
-                                secondary={
-                                  <>
-                                    {media.originalFilename && <div><strong>{media.originalFilename}</strong></div>}
-                                    <div>{media.url}</div>
-                                  </>
-                                }
-                              />
-                              <Button color="error" onClick={() => handleDeleteMedia(media.id, folder.id)}>
-                                Delete
-                              </Button>
-                            </ListItem>
-                          ))}
+                          {(folderContents[folder.id] || []).map(
+                            (media: any) => (
+                              <ListItem key={media.id} sx={{ pl: 4 }}>
+                                <ListItemText
+                                  primary={
+                                    media.type === "photo" ? "Photo" : "Video"
+                                  }
+                                  secondary={
+                                    <>
+                                      {media.originalFilename && (
+                                        <div>
+                                          <strong>
+                                            {media.originalFilename}
+                                          </strong>
+                                        </div>
+                                      )}
+                                      <div>{media.url}</div>
+                                    </>
+                                  }
+                                />
+                                <Button
+                                  color="error"
+                                  onClick={() =>
+                                    handleDeleteMedia(media.id, folder.id)
+                                  }
+                                >
+                                  Delete
+                                </Button>
+                              </ListItem>
+                            ),
+                          )}
                         </List>
                       </Collapse>
                     </Box>
@@ -323,23 +354,27 @@ export default function Admin() {
                   <TableBody>
                     {logs.map((log) => (
                       <TableRow key={log.id}>
-                        <TableCell>{new Date(log.createdAt).toLocaleString()}</TableCell>
+                        <TableCell>
+                          {new Date(log.createdAt).toLocaleString()}
+                        </TableCell>
                         <TableCell>
                           <Typography
                             sx={{
-                              color: 
-                                log.level === 'error' ? 'error.main' :
-                                log.level === 'warn' ? 'warning.main' :
-                                'success.main',
-                              fontWeight: log.level === 'error' ? 700 : 400
+                              color:
+                                log.level === "error"
+                                  ? "error.main"
+                                  : log.level === "warn"
+                                    ? "warning.main"
+                                    : "success.main",
+                              fontWeight: log.level === "error" ? 700 : 400,
                             }}
                           >
                             {log.level.toUpperCase()}
                           </Typography>
                         </TableCell>
                         <TableCell>{log.action}</TableCell>
-                        <TableCell>{log.details || '-'}</TableCell>
-                        <TableCell>{log.entityId || '-'}</TableCell>
+                        <TableCell>{log.details || "-"}</TableCell>
+                        <TableCell>{log.entityId || "-"}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

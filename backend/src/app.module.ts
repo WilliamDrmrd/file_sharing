@@ -7,12 +7,7 @@ import { LoggerService } from './logger.service';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [
-    ConfigModule.forRoot(),
-    FoldersModule, 
-    MediaModule,
-    AdminModule
-  ],
+  imports: [ConfigModule.forRoot(), FoldersModule, MediaModule, AdminModule],
   providers: [PrismaService, LoggerService],
   exports: [LoggerService],
 })

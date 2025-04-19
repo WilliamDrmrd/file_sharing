@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Dialog,
   DialogTitle,
@@ -7,16 +7,11 @@ import {
   Button,
   Typography,
   Box,
-  CircularProgress
-} from '@mui/material';
-import {
-  CheckCircle,
-  Error,
-  Info,
-  Warning
-} from '@mui/icons-material';
+  CircularProgress,
+} from "@mui/material";
+import { CheckCircle, Error, Info, Warning } from "@mui/icons-material";
 
-export type FeedbackType = 'success' | 'error' | 'info' | 'warning' | 'loading';
+export type FeedbackType = "success" | "error" | "info" | "warning" | "loading";
 
 interface FeedbackModalProps {
   open: boolean;
@@ -35,19 +30,19 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
   message,
   type,
   actionText,
-  onAction
+  onAction,
 }) => {
   const getIcon = () => {
     switch (type) {
-      case 'success':
+      case "success":
         return <CheckCircle color="success" sx={{ fontSize: 60 }} />;
-      case 'error':
+      case "error":
         return <Error color="error" sx={{ fontSize: 60 }} />;
-      case 'info':
+      case "info":
         return <Info color="info" sx={{ fontSize: 60 }} />;
-      case 'warning':
+      case "warning":
         return <Warning color="warning" sx={{ fontSize: 60 }} />;
-      case 'loading':
+      case "loading":
         return <CircularProgress size={60} />;
       default:
         return <Info color="info" sx={{ fontSize: 60 }} />;
@@ -56,63 +51,63 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
 
   const getColor = () => {
     switch (type) {
-      case 'success':
-        return 'success.main';
-      case 'error':
-        return 'error.main';
-      case 'info':
-        return 'info.main';
-      case 'warning':
-        return 'warning.main';
-      case 'loading':
-        return 'primary.main';
+      case "success":
+        return "success.main";
+      case "error":
+        return "error.main";
+      case "info":
+        return "info.main";
+      case "warning":
+        return "warning.main";
+      case "loading":
+        return "primary.main";
       default:
-        return 'primary.main';
+        return "primary.main";
     }
   };
 
   return (
     <Dialog
       open={open}
-      onClose={type !== 'loading' ? onClose : undefined}
+      onClose={type !== "loading" ? onClose : undefined}
       maxWidth="sm"
       fullWidth
     >
-      <DialogTitle sx={{ 
-        textAlign: 'center',
-        pb: 0
-      }}>
+      <DialogTitle
+        sx={{
+          textAlign: "center",
+          pb: 0,
+        }}
+      >
         {title}
       </DialogTitle>
       <DialogContent>
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: 'column',
-          alignItems: 'center', 
-          textAlign: 'center',
-          py: 3
-        }}>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            textAlign: "center",
+            py: 3,
+          }}
+        >
           {getIcon()}
           <Typography variant="body1" sx={{ mt: 2 }}>
             {message}
           </Typography>
         </Box>
       </DialogContent>
-      <DialogActions sx={{ justifyContent: 'center', pb: 3 }}>
-        {type !== 'loading' && (
-          <Button 
-            onClick={onClose} 
-            variant="outlined" 
-            sx={{ mr: 1 }}
-          >
+      <DialogActions sx={{ justifyContent: "center", pb: 3 }}>
+        {type !== "loading" && (
+          <Button onClick={onClose} variant="outlined" sx={{ mr: 1 }}>
             Close
           </Button>
         )}
-        {actionText && onAction && type !== 'loading' && (
-          <Button 
-            onClick={onAction} 
-            variant="contained" 
-            color={type === 'error' ? 'error' : 'primary'}
+        {actionText && onAction && type !== "loading" && (
+          <Button
+            onClick={onAction}
+            variant="contained"
+            color={type === "error" ? "error" : "primary"}
           >
             {actionText}
           </Button>

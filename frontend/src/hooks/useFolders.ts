@@ -7,7 +7,7 @@ export function useFolders() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchFolders().then(f => {
+    fetchFolders().then((f) => {
       setFolders(f);
       setLoading(false);
     });
@@ -15,7 +15,7 @@ export function useFolders() {
 
   const addFolder = async (input: CreateFolderInput) => {
     const newFolder = await createFolder(input);
-    setFolders(prev => [newFolder, ...prev]);
+    setFolders((prev) => [newFolder, ...prev]);
   };
 
   return { folders, loading, addFolder };

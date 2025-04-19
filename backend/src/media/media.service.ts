@@ -7,36 +7,50 @@ import * as path from 'path';
 @Injectable()
 export class MediaService {
   private readonly logger = new Logger(MediaService.name);
-  
+
   constructor(private prisma: PrismaService) {}
 
   async findByFolder(folderId: string) {
     this.logger.log(`Finding media for folder: ${folderId}`);
     return this.prisma.media.findMany({
       where: { folderId },
-      orderBy: { uploadedAt: 'desc' }
+      orderBy: { uploadedAt: 'desc' },
     });
   }
 
   async findById(mediaId: string) {
     this.logger.log(`Finding media by ID: ${mediaId}`);
     return this.prisma.media.findUnique({
-      where: { id: mediaId }
+      where: { id: mediaId },
     });
   }
-  
 
-  async create(folderId: string, url: string, type: MediaType, uploadedBy: string) {
-    this.logger.log(`Creating media for folder ${folderId}, type ${type}, url ${url}`);
+  async create(
+    folderId: string,
+    url: string,
+    type: MediaType,
+    uploadedBy: string,
+  ) {
+    this.logger.log(
+      `Creating media for folder ${folderId}, type ${type}, url ${url}`,
+    );
     return this.prisma.media.create({
-      data: { folderId, url, type, uploadedBy }
+      data: { folderId, url, type, uploadedBy },
     });
   }
-  
-  async createWithFilename(folderId: string, url: string, type: MediaType, uploadedBy: string, originalFilename: string) {
-    this.logger.log(`Creating media for folder ${folderId}, type ${type}, url ${url}, originalFilename ${originalFilename}`);
+
+  async createWithFilename(
+    folderId: string,
+    url: string,
+    type: MediaType,
+    uploadedBy: string,
+    originalFilename: string,
+  ) {
+    this.logger.log(
+      `Creating media for folder ${folderId}, type ${type}, url ${url}, originalFilename ${originalFilename}`,
+    );
     return this.prisma.media.create({
-      data: { folderId, url, type, uploadedBy, originalFilename }
+      data: { folderId, url, type, uploadedBy, originalFilename },
     });
   }
 
@@ -60,7 +74,7 @@ export class MediaService {
           }
         }
       }
-      
+
       // Remove from database
       return this.prisma.media.delete({ where: { id: mediaId } });
     } catch (error) {

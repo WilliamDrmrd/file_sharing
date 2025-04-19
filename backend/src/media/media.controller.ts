@@ -68,9 +68,11 @@ export class MediaController {
     const uploadedBy: string = body.uploadedBy || 'User';
 
     // Process all files and collect promises
-    const mediaPromises = files.map(file => {
+    const mediaPromises = files.map((file) => {
       const mime = file.mimetype;
-      const type: 'photo' | 'video' = mime.startsWith('image/') ? 'photo' : 'video';
+      const type: 'photo' | 'video' = mime.startsWith('image/')
+        ? 'photo'
+        : 'video';
       const url = `/uploads/${file.filename}`;
       const originalFilename = file.originalname;
 
@@ -103,7 +105,7 @@ export class SingleMediaController {
 
   constructor(
     private readonly mediaService: MediaService,
-    private readonly prisma: PrismaService
+    private readonly prisma: PrismaService,
   ) {}
 
   @Delete(':mediaId')
@@ -187,7 +189,7 @@ export class FolderDownloadController {
 
       // Get folder name from the database
       const folder = await this.prisma.folder.findUnique({
-        where: { id: folderId }
+        where: { id: folderId },
       });
       this.logger.log(`Folder found: ${JSON.stringify(folder)}`);
 
