@@ -5,6 +5,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { Storage, GetSignedUrlConfig } from '@google-cloud/storage';
 import { UploadCompleteDto } from './dto/upload-complete.dto';
+import * as console from "node:console";
 
 @Injectable()
 export class MediaService {
@@ -55,8 +56,7 @@ export class MediaService {
         },
       },
     });
-
-    const finalFilename = files
+    const finalFilename = files.length > 0
       ? `${filename.split('.')[0]}-${files.length}.${filename.split('.').pop()}`
       : filename;
 

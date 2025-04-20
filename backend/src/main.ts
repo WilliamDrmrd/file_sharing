@@ -14,7 +14,7 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       'http://localhost:3001',
-      'https://file-sharing-front-only.vercel.app',
+      'https://snapshare-ku.vercel.app',
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: ['Content-Type', 'Accept', 'ngrok-skip-browser-warning'],
