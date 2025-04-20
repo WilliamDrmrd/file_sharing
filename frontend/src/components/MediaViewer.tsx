@@ -78,9 +78,7 @@ export default function MediaViewer({
       // Create and store the promise
       const fetchPromise = (async () => {
         try {
-          const response = await fetch(getFullUrl(item.url), {
-            headers: { "ngrok-skip-browser-warning": "true" },
-          });
+          const response = await fetch(getFullUrl(item.url));
 
           if (!response.ok) {
             throw new Error(`Failed to fetch media: ${response.statusText}`);

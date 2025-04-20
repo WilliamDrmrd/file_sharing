@@ -112,17 +112,9 @@ export default function Folder() {
   const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
 
-    const formData = new FormData();
-    for (const file of Array.from(e.target.files)) {
-      formData.append("files", file);
-    }
-
-    // Add the uploader name - You can replace this with actual user name
-    formData.append("uploadedBy", "Front-End User");
-
     try {
       setLoading(true);
-      const newMediaItems = await uploadMedia(id!, formData);
+      const newMediaItems = await uploadMedia(id!, e.target.files);
       // Handle array of media items returned from backend
       setMedia((prev) => [
         ...(Array.isArray(newMediaItems) ? newMediaItems : [newMediaItems]),
@@ -153,18 +145,10 @@ export default function Folder() {
     e.stopPropagation();
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const formData = new FormData();
-      for (const file of Array.from(e.dataTransfer.files)) {
-        formData.append("files", file);
-      }
-
-      // Add the uploader name - You can replace this with actual user name
-      formData.append("uploadedBy", "Front-End User");
-
       // Show loading state
       setLoading(true);
 
-      uploadMedia(id!, formData)
+      uploadMedia(id!, e.dataTransfer.files)
         .then((newMediaItems) => {
           // Handle array of media items returned from backend
           setMedia((prev) => [

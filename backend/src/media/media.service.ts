@@ -1,14 +1,98 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
-import { MediaType } from '@prisma/client';
+import { Media, MediaType } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
+import { Storage, GetSignedUrlConfig } from '@google-cloud/storage';
+import { UploadCompleteDto } from './dto/upload-complete.dto';
 
 @Injectable()
 export class MediaService {
   private readonly logger = new Logger(MediaService.name);
+  private readonly storage: Storage;
+  private readonly bucketName: string;
 
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) {
+    const projectId = process.env.GCLOUD_PROJECT_ID || 'default-project-id';
+    const keyFilename =
+      process.env.GCLOUD_KEY_FILE || '/path/to/default-key.json';
+
+    this.storage = new Storage({ projectId, keyFilename });
+    this.bucketName = process.env.GCLOUD_BUCKET_NAME || 'default-bucket-name';
+  }
+
+  /**
+   * Generates a signed URL for uploading files to Google Cloud Storage.
+   * @param filename The name of the file to be uploaded.
+   * @param contentType The MIME type of the file.
+   * @returns A signed URL string.
+   */
+  async generateSignedUrl(
+    filename: string,
+    contentType: string,
+  ): Promise<{ url: string; finalFilename: string }> {
+    this.logger.log(
+      `Generating signed URL for ${filename} with content type ${contentType}`,
+    );
+    if (!filename || !contentType) {
+      this.logger.error(
+        'Filename and content type are required for signed URL generation.',
+      );
+      throw new Error('Filename and content type are required');
+    }
+
+    const options: GetSignedUrlConfig = {
+      version: 'v4',
+      action: 'write',
+      expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+      contentType: contentType,
+    };
+
+    const files = await this.prisma.media.findMany({
+      where: {
+        originalFilename: {
+          startsWith: filename.split('.')[0],
+        },
+      },
+    });
+
+    const finalFilename = files
+      ? `${filename.split('.')[0]}-${files.length}.${filename.split('.').pop()}`
+      : filename;
+
+    try {
+      const [url] = await this.storage
+        .bucket(this.bucketName)
+        .file(finalFilename)
+        .getSignedUrl(options);
+
+      this.logger.log(`Generated signed URL for ${finalFilename}: ${url}`);
+      return { url, finalFilename };
+    } catch (error) {
+      this.logger.error(
+        `Failed to generate signed URL for ${finalFilename}: ${error.message}`,
+      );
+      throw new Error('Failed to generate signed URL');
+    }
+  }
+
+  async handleUploadComplete(data: UploadCompleteDto): Promise<Media> {
+    if (!data.filename) {
+      this.logger.error('Filename is required to confirm upload completion.');
+      throw new Error('Filename is required');
+    }
+
+    this.logger.log(`File ${data.filename} upload complete`);
+    return this.prisma.media.create({
+      data: {
+        folderId: data.folderId,
+        url: `https://storage.googleapis.com/${this.bucketName}/${data.filename}`,
+        type: data.type,
+        uploadedBy: data.uploadedBy,
+        originalFilename: data.filename,
+      },
+    });
+  }
 
   async findByFolder(folderId: string) {
     this.logger.log(`Finding media for folder: ${folderId}`);

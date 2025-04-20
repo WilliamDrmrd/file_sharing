@@ -1,30 +1,32 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Delete,
-  Param,
-  UploadedFile,
-  UploadedFiles,
-  UseInterceptors,
   Body,
+  Controller,
+  Delete,
+  Get,
+  HttpException,
+  HttpStatus,
   Logger,
+  Param,
+  Post,
   Res,
   StreamableFile,
+  UploadedFiles,
+  UseInterceptors,
 } from '@nestjs/common';
 import { MediaService } from './media.service';
 import { PrismaService } from '../prisma.service';
-import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { extname, join } from 'path';
+import * as path from 'path';
+import { extname } from 'path';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
-import * as path from 'path';
 import { Response } from 'express';
 import * as archiver from 'archiver';
 
-// Import multer typings
 import 'multer';
+import { GenerateSignedUrlDto } from './dto/generate-signed-url.dto';
+import { UploadCompleteDto } from './dto/upload-complete.dto';
 
 @Controller('api/folders/:folderId/media')
 export class MediaController {
@@ -38,58 +40,61 @@ export class MediaController {
     return this.mediaService.findByFolder(folderId);
   }
 
-  @Post()
-  @UseInterceptors(
-    FilesInterceptor('files', 10, {
-      storage: diskStorage({
-        destination: './uploads',
-        filename: (req, file, cb) => {
-          const uniqueSuffix = `${randomUUID()}${extname(file.originalname)}`;
-          cb(null, uniqueSuffix);
-        },
-      }),
-    }),
-  )
-  async uploadFiles(
-    @Param('folderId') folderId: string,
-    @UploadedFiles() files,
-    @Body() body: any,
+  @Post('generateSignedUrls')
+  async generateSignedUrl(
+    @Body() generateSignedUrlDtos: GenerateSignedUrlDto[],
   ) {
-    if (!files || files.length === 0) {
-      throw new Error('No files uploaded');
+    let signedUrls: {
+      signedUrl: string;
+      filename: string;
+      contentType: string;
+      type: string;
+    }[] = [];
+    for (const toGenerate of generateSignedUrlDtos) {
+      const { filename, contentType, type } = toGenerate;
+
+      if (!filename || !contentType) {
+        throw new HttpException(
+          { error: 'Filename and contentType are required' },
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      try {
+        const signedUrl = await this.mediaService.generateSignedUrl(
+          filename,
+          contentType,
+        );
+        signedUrls.push({
+          signedUrl: signedUrl.url,
+          filename: signedUrl.finalFilename,
+          contentType,
+          type,
+        });
+      } catch (error) {
+        console.error(error);
+        throw new HttpException(
+          { error: 'Failed to generate signed URL' },
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
     }
+    return signedUrls;
+  }
 
-    this.logger.log(
-      `Uploading files to folder ${folderId}: ${files.length} files`,
-    );
-    this.logger.log(`Body: ${JSON.stringify(body)}`);
-
-    // Set uploadedBy to a default value
-    const uploadedBy: string = body.uploadedBy || 'User';
-
-    // Process all files and collect promises
-    const mediaPromises = files.map((file) => {
-      const mime = file.mimetype;
-      const type: 'photo' | 'video' = mime.startsWith('image/')
-        ? 'photo'
-        : 'video';
-      const url = `/uploads/${file.filename}`;
-      const originalFilename = file.originalname;
-
-      return this.mediaService.createWithFilename(
-        folderId,
-        url,
-        type,
-        uploadedBy,
-        originalFilename,
+  @Post('uploadComplete')
+  async uploadComplete(@Body() uploadCompleteDto: UploadCompleteDto) {
+    try {
+      return await this.mediaService.handleUploadComplete(uploadCompleteDto);
+    } catch (error) {
+      this.logger.error(
+        `Failed to confirm upload completion: ${error.message}`,
       );
-    });
-
-    // Wait for all files to be processed
-    const results = await Promise.all(mediaPromises);
-
-    // Return all created media items
-    return results;
+      throw new HttpException(
+        { error: 'Failed to confirm upload completion' },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Delete(':mediaId')

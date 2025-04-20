@@ -25,10 +25,7 @@ async function bootstrap() {
   app.useStaticAssets(join(__dirname, '..', 'Uploads'), {
     prefix: '/uploads/',
     setHeaders: (res) => {
-      res.setHeader(
-        'Access-Control-Allow-Origin',
-        'https://file-sharing-front-only.vercel.app',
-      );
+      res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3001');
       res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
       res.setHeader(
         'Access-Control-Allow-Headers',

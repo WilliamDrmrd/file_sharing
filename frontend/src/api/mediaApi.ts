@@ -60,21 +60,85 @@ export async function fetchFolderContent(
 
 export async function uploadMedia(
   folderId: string,
-  formData: FormData,
-): Promise<MediaItem> {
-  const response = await fetch(`${API_BASE_URL}/folders/${folderId}/media`, {
-    method: "POST",
-    body: formData,
-    headers: {
-      "ngrok-skip-browser-warning": "true",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to upload media");
+  files: FileList,
+): Promise<MediaItem[]> {
+  let requestArray: {
+    filename: string;
+    contentType: string;
+    type: "photo" | "video";
+    uploadedBy: string;
+  }[] = [];
+  for (const file of Array.from(files)) {
+    const filename = file.name;
+    const contentType = file.type;
+    const type: "photo" | "video" = contentType.startsWith("image/")
+      ? "photo"
+      : "video";
+    requestArray.push({ filename, contentType, type, uploadedBy: "user" });
   }
 
-  return response.json();
+  const response = await fetch(
+    `${API_BASE_URL}/folders/${folderId}/media/generateSignedUrls`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestArray),
+    },
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(`Error: ${error.message || response.statusText}`);
+  }
+  const data: {
+    signedUrl: string;
+    filename: string;
+    contentType: string;
+    type: string;
+  }[] = await response.json();
+  let finalResponses: MediaItem[] = [];
+
+  for (let i = 0; i < data.length; i++) {
+    try {
+      await fetch(data[i].signedUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": data[i].contentType,
+        },
+        body: files[i],
+      });
+
+      console.log("File uploaded successfully");
+
+      const finalResponse = await fetch(
+        `${API_BASE_URL}/folders/${folderId}/media/uploadComplete`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            folderId: folderId,
+            type: data[i].type,
+            uploadedBy: "user",
+            filename: data[i].filename,
+          }),
+        },
+      );
+      if (!finalResponse.ok) {
+        const error = await finalResponse.json();
+        throw new Error(`Error: ${error.message || finalResponse.statusText}`);
+      }
+      const mediaItem: MediaItem = await finalResponse.json();
+      finalResponses.push(mediaItem);
+      console.log("Upload confirmation sent to backend");
+    } catch (error) {
+      console.error("Error uploading file:", error);
+    }
+  }
+  return finalResponses;
 }
 
 export async function deleteFolder(folderId: string): Promise<void> {

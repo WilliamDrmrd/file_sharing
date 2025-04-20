@@ -26,3 +26,4 @@ yarn-error.log*
 uploads
 
 .idea
+.google_secret.json

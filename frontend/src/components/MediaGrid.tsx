@@ -72,9 +72,7 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
       const fetchPromise = (async () => {
         try {
           // Always use headers with ngrok-skip-browser-warning
-          const response = await fetch(getFullUrl(item.url), {
-            headers: { "ngrok-skip-browser-warning": "true" },
-          });
+          const response = await fetch(getFullUrl(item.url));
 
           if (!response.ok) {
             throw new Error(`HTTP error ${response.status}`);
