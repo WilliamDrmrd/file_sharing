@@ -14,5 +14,6 @@ import { PrismaService } from '../prisma.service';
     FolderDownloadController,
   ],
   providers: [MediaService, PrismaService],
+  exports: [MediaService],
 })
 export class MediaModule {}

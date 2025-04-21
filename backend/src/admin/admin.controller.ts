@@ -16,6 +16,7 @@ import { extname } from 'path';
 import * as fs from 'fs';
 import * as archiver from 'archiver';
 import { AdminGuard } from './guards/admin.guard';
+import { MediaService } from '../media/media.service';
 
 class AdminLoginDto {
   password: string;
@@ -27,6 +28,7 @@ export class AdminController {
     private readonly prisma: PrismaService,
     private readonly logger: LoggerService,
     private readonly configService: ConfigService,
+    private readonly mediaService: MediaService,
   ) {}
 
   @Post('login')
@@ -113,21 +115,9 @@ export class AdminController {
       this.logger.info(`Admin deleting media: ${id}`);
 
       // Delete the physical file
-      if (media.url) {
-        const filename = media.url.split('/').pop();
-        if (filename) {
-          const filePath = path.join('./uploads', filename);
-          if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-            this.logger.info(`Admin deleted file ${filePath}`);
-          }
-        }
+      if (media.url && media.originalFilename) {
+        await this.mediaService.remove(media.id);
       }
-
-      // Delete from database
-      return await this.prisma.media.delete({
-        where: { id },
-      });
     } catch (error) {
       this.logger.error(`Error in admin media deletion: ${error.message}`);
       throw error;

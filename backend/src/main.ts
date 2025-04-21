@@ -17,7 +17,7 @@ async function bootstrap() {
       'https://snapshare-ku.vercel.app',
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: ['Content-Type', 'Accept', 'ngrok-skip-browser-warning'],
+    allowedHeaders: ['Content-Type', 'Accept', 'ngrok-skip-browser-warning', 'x-admin-token'],
     credentials: true, // Optional, if you use cookies or auth
   });
   await app.listen(3000);

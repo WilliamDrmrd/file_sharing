@@ -1,11 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { Media, MediaType } from '@prisma/client';
-import * as fs from 'fs';
-import * as path from 'path';
 import { Storage, GetSignedUrlConfig } from '@google-cloud/storage';
 import { UploadCompleteDto } from './dto/upload-complete.dto';
-import * as console from "node:console";
 
 @Injectable()
 export class MediaService {
@@ -66,7 +63,7 @@ export class MediaService {
         .file(finalFilename)
         .getSignedUrl(options);
 
-      this.logger.log(`Generated signed URL for ${finalFilename}: ${url}`);
+      this.logger.log(`Generated signed URL for ${finalFilename}`);
       return { url, finalFilename };
     } catch (error) {
       this.logger.error(
@@ -143,20 +140,12 @@ export class MediaService {
     try {
       // First get the media to see the file path
       const media = await this.findById(mediaId);
-      if (media && media.url) {
-        this.logger.log(`Removing file from disk: ${media.url}`);
-        // Extract filename from the URL
-        const filename = media.url.split('/').pop();
-        if (filename) {
-          // Delete the physical file
-          const filePath = path.join('./uploads', filename);
-          if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-            this.logger.log(`File ${filePath} deleted successfully`);
-          } else {
-            this.logger.warn(`File not found: ${filePath}`);
-          }
-        }
+      if (media && media.url && media.originalFilename) {
+        const bucket = this.storage.bucket(this.bucketName);
+        const file = bucket.file(media.originalFilename);
+
+        await file.delete();
+        console.log(`File ${media.originalFilename} deleted from GCS`);
       }
 
       // Remove from database
