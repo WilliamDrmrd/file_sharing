@@ -100,18 +100,39 @@ export async function uploadMedia(
   }[] = await response.json();
   let finalResponses: MediaItem[] = [];
 
-  for (let i = 0; i < data.length; i++) {
-    try {
-      await fetch(data[i].signedUrl, {
+  try {
+    const uploadPromises = data.map((item, i) => {
+      return fetch(item.signedUrl, {
         method: "PUT",
         headers: {
-          "Content-Type": data[i].contentType,
+          "Content-Type": item.contentType,
         },
         body: files[i],
-      });
+      })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`Upload failed for ${item.signedUrl}: ${response.status} ${response.statusText}`);
+            }
+            console.log(`File ${item.signedUrl} uploaded successfully`);
+            return response; // Important: Return the response to make the promise resolve
+          })
+          .catch(error => {
+            console.error(`Error uploading ${item.signedUrl}:`, error);
+            throw error; // Re-throw the error to reject Promise.all
+          });
+    });
 
-      console.log("File uploaded successfully");
+    await Promise.all(uploadPromises);
 
+    console.log("All files uploaded successfully!");
+
+  } catch (error) {
+    console.error("An error occurred during the upload process:", error);
+    // Handle the error appropriately - potentially retry, inform the user, etc.
+  }
+
+  for (let i = 0; i < data.length; i++) {
+    try {
       const finalResponse = await fetch(
         `${API_BASE_URL}/folders/${folderId}/media/uploadComplete`,
         {
