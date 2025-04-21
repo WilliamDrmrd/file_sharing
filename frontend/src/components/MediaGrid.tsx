@@ -97,7 +97,7 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
 
 // Process items in batches to avoid overwhelming the browser
     const processInBatches = async () => {
-      const batchSize = 12; // Process 12 items per batch
+      const batchSize = 3; // Process 3 items per batch
       const newBlobUrls: { [key: string]: string } = { ...blobUrls };
 
       // Process in batches
