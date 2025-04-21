@@ -61,17 +61,14 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
     // We'll keep track of which requests are in progress to avoid duplicates
     const pendingRequests = new Map<string, Promise<string | null>>();
 
-    // Function to fetch a single item
     const fetchItem = async (item: MediaItem): Promise<string | null> => {
       // Check if this item is already being fetched
       if (pendingRequests.has(item.id)) {
         return pendingRequests.get(item.id) as Promise<string | null>;
       }
-
       // Start a new fetch request
       const fetchPromise = (async () => {
         try {
-          // Always use headers with ngrok-skip-browser-warning
           const response = await fetch(getFullUrl(item.url));
 
           if (!response.ok) {
@@ -80,7 +77,6 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
 
           // Get the media as a blob
           const blob = await response.blob();
-
           // Create a blob URL that can be used directly by img/video tags
           const blobUrl = URL.createObjectURL(blob);
           return blobUrl;
@@ -98,31 +94,34 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
       return fetchPromise;
     };
 
-    // Process items in batches to avoid overwhelming the browser
+
+// Process items in batches to avoid overwhelming the browser
     const processInBatches = async () => {
-      const batchSize = 3; // Load 3 items at a time
+      const batchSize = 12; // Process 12 items per batch
       const newBlobUrls: { [key: string]: string } = { ...blobUrls };
 
       // Process in batches
       for (let i = 0; i < currentItems.length; i += batchSize) {
         const batchItems = currentItems.slice(i, i + batchSize);
 
-        // Process this batch in parallel
+        console.log(`Processing batch ${Math.floor(i/batchSize) + 1} with ${batchItems.length} items`);
+
+        // Process this batch in parallel with Promise.all
         const results = await Promise.all(
-          batchItems.map(async (item) => {
-            // Skip if we already have this URL
-            if (blobUrls[item.id]) {
+            batchItems.map(async (item) => {
+              // Skip if we already have this URL
+              if (blobUrls[item.id]) {
+                setLoadingItems((prev) => ({ ...prev, [item.id]: false }));
+                return [item.id, blobUrls[item.id]];
+              }
+
+              const blobUrl = await fetchItem(item);
+
+              // Update loading state regardless of success/failure
               setLoadingItems((prev) => ({ ...prev, [item.id]: false }));
-              return [item.id, blobUrls[item.id]];
-            }
 
-            const blobUrl = await fetchItem(item);
-
-            // Update loading state regardless of success/failure
-            setLoadingItems((prev) => ({ ...prev, [item.id]: false }));
-
-            return [item.id, blobUrl];
-          }),
+              return [item.id, blobUrl];
+            })
         );
 
         // Update blob URLs with results from this batch
@@ -132,6 +131,9 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
 
         // Update our state after each batch
         setBlobUrls({ ...newBlobUrls });
+
+        // Optional: Add a small delay between batches to prevent UI freezing
+        await new Promise(resolve => setTimeout(resolve, 50));
       }
     };
 
@@ -180,6 +182,7 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
 
   // Handle download folder as zip
   const handleDownloadFolder = () => {
+    return;
     if (!folderId) return;
 
     // Create a link element and trigger download
@@ -412,9 +415,8 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
                       size="small"
                       onClick={(e) => {
                         e.stopPropagation();
-                        const API_BASE_URL = `${process.env.REACT_APP_API_URL || "http://localhost:3000"}/api`;
                         window.open(
-                          `${API_BASE_URL}/media/${item.id}/download`,
+                          `${getFullUrl(item.url)}`,
                           "_blank",
                         );
                       }}
