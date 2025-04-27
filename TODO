@@ -6,3 +6,5 @@ add uploader in the preview too
   means adding uploader to media schema in db, as well as everywhere else
   means in the front when you upload you will be prompted to add a name or anonymous
 filtre photo/video/both avec un triple slider, middle/left/right avec middle include les deux
+
+add a loading ehen uploading photos and find a wayto close instant the add files. 

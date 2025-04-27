@@ -439,7 +439,10 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
                         size="small"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDelete(item.id);
+                          window.open(
+                            `${getFullUrl(item.url)}`,
+                            "_blank",
+                          );
                         }}
                         sx={{
                           padding: { xs: 0.75, sm: 0.85, md: 1 },
