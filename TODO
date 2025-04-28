@@ -11,6 +11,7 @@ TOP PRIORITY
 
     make the soft delete for everyone
         ask name when delete
+        just ask if they are sure or not, too.
 
     when I delete the folder it should soft delete the elements too.
 

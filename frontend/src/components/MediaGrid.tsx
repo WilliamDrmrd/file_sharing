@@ -109,12 +109,10 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
               // Skip if we already have this URL
               if (blobUrls[item.id]) {
                 setLoadingItems((prev) => ({ ...prev, [item.id]: false }));
-                await sleep(3000);
                 return [item.id, blobUrls[item.id]];
               }
 
               const blobUrl = await fetchItem(item);
-              await sleep(3000);
 
               // Update loading state regardless of success/failure
               setLoadingItems((prev) => ({ ...prev, [item.id]: false }));
