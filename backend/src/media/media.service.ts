@@ -94,7 +94,10 @@ export class MediaService {
   async findByFolder(folderId: string) {
     this.logger.log(`Finding media for folder: ${folderId}`);
     return this.prisma.media.findMany({
-      where: { folderId },
+      where: {
+        folderId,
+        deleted: false,
+      },
       orderBy: { uploadedAt: 'desc' },
     });
   }
@@ -135,21 +138,37 @@ export class MediaService {
     });
   }
 
-  async remove(mediaId: string) {
+  async remove(mediaId: string) : Promise<Media> {
     this.logger.log(`Removing media from database: ${mediaId}`);
     try {
       // First get the media to see the file path
       const media = await this.findById(mediaId);
-      if (media && media.url && media.originalFilename) {
-        const bucket = this.storage.bucket(this.bucketName);
-        const file = bucket.file(media.originalFilename);
+      if (!(media && media.url && media.originalFilename))
+          throw new Error("media ID not found in the DB");
+      const bucket = this.storage.bucket(this.bucketName);
+      const file = bucket.file(media.originalFilename);
 
-        await file.delete();
-        console.log(`File ${media.originalFilename} deleted from GCS`);
-      }
+      await file.rename("deleted_" + file.name);
+      console.log(`File ${media.originalFilename} soft-deleted from GCS`);
 
-      // Remove from database
-      return this.prisma.media.delete({ where: { id: mediaId } });
+      // Soft delete
+      this.prisma.folder.update({
+        where: {
+          id: media.folderId
+        },
+        data: {
+
+        }
+      })
+      return this.prisma.media.update({
+        where: {
+          id: mediaId
+        },
+        data: {
+          originalFilename: "deleted_" + media.originalFilename,
+          deleted: true,
+        },
+      });
     } catch (error) {
       this.logger.error(`Error deleting media: ${error.message}`);
       throw error;

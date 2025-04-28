@@ -15,7 +15,11 @@ export class FoldersService {
     const folders = await this.prisma.folder.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
-        media: true,
+        media: {
+          where: {
+            deleted: false
+          }
+        },
       },
     });
 

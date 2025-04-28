@@ -15,14 +15,17 @@ import {
   Download,
   Fullscreen,
   FullscreenExit,
+  Delete
 } from "@mui/icons-material";
 import { MediaItem } from "../types";
+import {deleteMedia} from "../api/mediaApi";
 
 interface MediaViewerProps {
   items: MediaItem[];
   currentIndex: number;
   open: boolean;
   onClose: () => void;
+  handleDelete: (id: string) => Promise<void>;
   existingBlobUrls?: { [key: string]: string };
   onUpdateBlobUrls?: (urls: { [key: string]: string }) => void;
 }
@@ -32,6 +35,7 @@ export default function MediaViewer({
   currentIndex,
   open,
   onClose,
+  handleDelete,
   existingBlobUrls = {},
   onUpdateBlobUrls,
 }: MediaViewerProps) {
@@ -39,6 +43,7 @@ export default function MediaViewer({
   const [loading, setLoading] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [blobUrls, setBlobUrls] = useState<{ [key: string]: string }>(
     existingBlobUrls,
   );
@@ -259,15 +264,26 @@ export default function MediaViewer({
 
       // Create an anchor element and trigger download
       window.open(
-                            `${getFullUrl(currentItem.url)}`,
-                            "_blank",
-                          );
+        `${getFullUrl(currentItem.url)}`,
+        "_blank",
+      );
     } catch (error) {
       console.error("Error downloading file:", error);
     } finally {
       setDownloading(false);
     }
   };
+
+  const handleDeleteInView = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      setDeleting(true);
+      await handleDelete(currentItem.id);
+      setDeleting(false);
+    } catch (error) {
+      console.error("Error deleting file:", error);
+    }
+  }
 
   // Handle media load complete
   const handleMediaLoaded = () => {
@@ -432,6 +448,21 @@ export default function MediaViewer({
           </Box>
 
           <Box>
+            <Button
+                startIcon={
+                  deleting ? (
+                      <CircularProgress size={16} color="inherit" />
+                  ) : (
+                      <Delete />
+                  )
+                }
+                onClick={handleDeleteInView}
+                disabled={deleting}
+                sx={{ color: "red", mr: 1 }}
+            >
+              Delete
+            </Button>
+
             <Button
               startIcon={
                 downloading ? (

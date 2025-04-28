@@ -1,27 +1,21 @@
 import {
-  Card,
-  CardMedia,
-  CardContent,
-  Typography,
-  Box,
-  IconButton,
-  Button,
-  Chip,
-  useTheme,
   alpha,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CardMedia,
+  Chip,
+  IconButton,
   Skeleton,
+  Typography,
+  useTheme,
+  CircularProgress,
 } from "@mui/material";
-import {
-  Delete,
-  Download,
-  Visibility,
-  FileDownload,
-  Image,
-  Videocam,
-} from "@mui/icons-material";
-import { MediaItem } from "../types";
-import { useState, useEffect } from "react";
-import { deleteMedia } from "../api/mediaApi";
+import {Download, FileDownload, Image, Videocam, Visibility,} from "@mui/icons-material";
+import {MediaItem} from "../types";
+import {useEffect, useState} from "react";
+import {deleteMedia} from "../api/mediaApi";
 import MediaViewer from "./MediaViewer";
 
 interface Props {
@@ -39,6 +33,10 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
     {},
   );
   const [blobUrls, setBlobUrls] = useState<{ [key: string]: string }>({});
+
+  function sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
 
   useEffect(() => {
     setCurrentItems(items);
@@ -78,8 +76,7 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
           // Get the media as a blob
           const blob = await response.blob();
           // Create a blob URL that can be used directly by img/video tags
-          const blobUrl = URL.createObjectURL(blob);
-          return blobUrl;
+          return URL.createObjectURL(blob);
         } catch (error) {
           console.error(`Error loading media ${item.id}:`, error);
           return null;
@@ -112,10 +109,12 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
               // Skip if we already have this URL
               if (blobUrls[item.id]) {
                 setLoadingItems((prev) => ({ ...prev, [item.id]: false }));
+                await sleep(3000);
                 return [item.id, blobUrls[item.id]];
               }
 
               const blobUrl = await fetchItem(item);
+              await sleep(3000);
 
               // Update loading state regardless of success/failure
               setLoadingItems((prev) => ({ ...prev, [item.id]: false }));
@@ -183,20 +182,6 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
   // Handle download folder as zip
   const handleDownloadFolder = () => {
     return;
-    if (!folderId) return;
-
-    // Create a link element and trigger download
-    const API_BASE_URL = `${process.env.REACT_APP_API_URL || "http://localhost:3000"}/api`;
-    const downloadUrl = `${API_BASE_URL}/folders/${folderId}/download`;
-
-    // Create a temporary link element
-    const link = document.createElement("a");
-    link.href = downloadUrl;
-    link.download = ""; // Let the server set the filename
-    link.setAttribute("ngrok-skip-browser-warning", "true"); // Add ngrok header
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   return (
@@ -258,52 +243,51 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
                     "&:hover .media-overlay": { opacity: 1 },
                     "&:hover img, &:hover video": { transform: "scale(1.05)" },
                   }}
+
                   onClick={() => openViewer(index)}
                 >
-                  {loadingItems[item.id] !== false && (
-                    <Skeleton
-                      variant="rectangular"
-                      width="100%"
-                      height="100%"
-                      animation="wave"
-                      sx={{
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        zIndex: 1,
-                        bgcolor: alpha(theme.palette.background.paper, 0.2),
-                      }}
-                    />
-                  )}
-
-                  {/* Only render media when we have blob URL ready or if loading failed */}
-                  {(blobUrls[item.id] || loadingItems[item.id] === false) &&
-                    (isImage ? (
-                      <CardMedia
-                        component="img"
-                        src={blobUrls[item.id]}
-                        alt={item.originalFilename || "Photo"}
+                  {
+                    loadingItems[item.id] !== false ? (
+                      <Box sx={{position: 'relative', height: { xs: 140, sm: 160, md: 200 },}}>
+                        <CircularProgress size={24} color="inherit"
                         sx={{
-                          height: { xs: 140, sm: 160, md: 200 },
-                          objectFit: "cover",
-                          transition: "transform 0.3s ease",
-                        }}
-                        onLoad={() => handleImageLoad(item.id)}
-                      />
+                          position: 'absolute',
+                          top: 'calc(50% - 12px)',
+                          left: 'calc(50% - 12px)',
+                          transform: 'translate(-50%, -50%)',
+                          zIndex: 1,
+                        }}/>
+                      </Box>
                     ) : (
-                      <CardMedia
-                        component="video"
-                        src={blobUrls[item.id]}
-                        preload="metadata"
-                        muted
-                        sx={{
-                          height: { xs: 140, sm: 160, md: 200 },
-                          objectFit: "cover",
-                          transition: "transform 0.3s ease",
-                        }}
-                        onLoadedMetadata={() => handleImageLoad(item.id)}
-                      />
-                    ))}
+                      <Box sx={{ position: 'relative', height: { xs: 140, sm: 160, md: 200 },}}>
+                        {(isImage ? (
+                          <CardMedia
+                            component="img"
+                            src={blobUrls[item.id]}
+                            sx={{
+                              height: '100%',
+                              objectFit: 'cover',
+                              transition: 'opacity 0.3s ease',
+                            }}
+                            onLoadedMetadata={() => handleImageLoad(item.id)}
+                          />
+                        ) : (
+                          <CardMedia
+                            component="video"
+                            src={blobUrls[item.id]}
+                            preload="metadata"
+                            muted
+                            sx={{
+                              height: { xs: 140, sm: 160, md: 200 },
+                              objectFit: "cover",
+                              transition: "transform 0.3s ease",
+                            }}
+                            onLoadedMetadata={() => handleImageLoad(item.id)}
+                          />
+                        ))}
+                      </Box>
+                    )
+                  }
 
                   {/* Type indicator */}
                   <Box
@@ -414,11 +398,14 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
                     <IconButton
                       size="small"
                       onClick={(e) => {
+                        //TODO finish this.
                         e.stopPropagation();
-                        window.open(
-                          `${getFullUrl(item.url)}`,
-                          "_blank",
-                        );
+                        const link = document.createElement("a");
+                        link.href = getFullUrl(item.url); // Replace with your URL logic
+                        link.download = "image.jpg"; // Specify a default filename
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
                       }}
                       sx={{
                         padding: { xs: 0.75, sm: 0.85, md: 1 },
@@ -433,31 +420,6 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
                         sx={{ color: theme.palette.primary.main }}
                       />
                     </IconButton>
-
-                    {isAdmin && (
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          window.open(
-                            `${getFullUrl(item.url)}`,
-                            "_blank",
-                          );
-                        }}
-                        sx={{
-                          padding: { xs: 0.75, sm: 0.85, md: 1 },
-                          bgcolor: alpha(theme.palette.error.main, 0.1),
-                          "&:hover": {
-                            bgcolor: alpha(theme.palette.error.main, 0.2),
-                          },
-                        }}
-                      >
-                        <Delete
-                          fontSize="small"
-                          sx={{ color: theme.palette.error.main }}
-                        />
-                      </IconButton>
-                    )}
                   </Box>
                 </CardContent>
               </Card>
@@ -517,6 +479,7 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
           open={viewerOpen}
           onClose={() => setViewerOpen(false)}
           existingBlobUrls={blobUrls}
+          handleDelete={handleDelete}
           onUpdateBlobUrls={(newBlobUrls) => {
             // Use a function form of setState to avoid dependency on current blobUrls
             // This prevents infinite render loops

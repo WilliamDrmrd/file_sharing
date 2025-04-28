@@ -1,10 +1,45 @@
-make the soft delete for everyone
-the zip thing
-add the date in the preview, aswell as size
-  means adding size and date to media schema in db, aswell as everywhere else
-add uploader in the preview too
-  means adding uploader to media schema in db, as well as everywhere else
-  means in the front when you upload you will be prompted to add a name or anonymous
-filtre photo/video/both avec un triple slider, middle/left/right avec middle include les deux
+TOP PRIORITY
 
-add a loading ehen uploading photos and find a wayto close instant the add files. 
+    add a loading when uploading photos and find a wayto close instant the add files.
+
+    preload_little versions before clicking on them, fetch the big version one by one with 3 in advance.
+        subtasks:
+            -   create a cloud run service to make a thumbnail.
+            -   should create a thumbnail for videos too.
+            -   maybe find a way to show a loading time.
+            -   deleting a picture should delete the thumbnail too.
+
+    make the soft delete for everyone
+        ask name when delete
+
+    when I delete the folder it should soft delete the elements too.
+
+    the zip thing
+
+     fix sur le pc et meme peut etre sur le tel quand on regarde une video faut pas que la barre
+            en bas elle empeche de pouvoir appuyer sur les boutons.
+
+---------------------------------------------------------------------------------------------------
+
+LOW PRIORITY
+
+    add the date in the preview, aswell as size
+      means adding size and date to media schema in db, aswell as everywhere else
+
+    add uploader in the preview too
+      means adding uploader to media schema in db, as well as everywhere else
+      means in the front when you upload you will be prompted to add a name or anonymous
+
+    filtre photo/video/both avec un triple slider, middle/left/right avec middle include les deux
+
+    add database columns for like folderName, etc.
+
+    load the photos before videos.
+
+---------------------------------------------------------------------------------------------------
+
+BUGFIXES
+
+check if when we create image with same name it works
+    check if when we create image with same name of a deleted one, it works, because then
+        if we delete the new one it will try to have the same name as the deleted.

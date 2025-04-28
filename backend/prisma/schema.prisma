@@ -25,6 +25,7 @@ model Media {
   uploadedAt       DateTime  @default(now())
   uploadedBy       String
   originalFilename String?
+  deleted          Boolean   @default(false)
   folder           Folder    @relation(fields: [folderId], references: [id], onDelete: Cascade)
 }
 
