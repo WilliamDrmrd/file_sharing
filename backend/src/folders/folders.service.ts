@@ -1,19 +1,23 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../prisma.service';
-import { CreateFolderDto } from './dto/create-folder.dto';
-import * as fs from 'fs';
-import * as path from 'path';
+import {Injectable, Logger} from '@nestjs/common';
+import {PrismaService} from '../prisma.service';
+import {CreateFolderDto} from './dto/create-folder.dto';
+import {MediaService} from '../media/media.service';
 
 @Injectable()
 export class FoldersService {
   private readonly logger = new Logger(FoldersService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService,
+              private mediaService: MediaService) {
+  }
 
   async findAll() {
     this.logger.log('Finding all folders');
     const folders = await this.prisma.folder.findMany({
-      orderBy: { createdAt: 'desc' },
+      where: {
+        deleted: false,
+      },
+      orderBy: {createdAt: 'desc'},
       include: {
         media: {
           where: {
@@ -34,7 +38,7 @@ export class FoldersService {
   async findOne(id: string) {
     this.logger.log(`Finding folder with ID: ${id}`);
     const folder = await this.prisma.folder.findUnique({
-      where: { id },
+      where: {id},
       include: {
         media: true,
       },
@@ -56,25 +60,25 @@ export class FoldersService {
     this.logger.log(`Verifying password for folder: ${id}, ${password}`);
 
     const folder = await this.prisma.folder.findUnique({
-      where: { id },
-      select: { password: true },
+      where: {id},
+      select: {password: true},
     });
 
     if (!folder) {
       this.logger.warn(`Folder not found for password verification: ${id}`);
-      return { verified: false };
+      return {verified: false};
     }
 
     // If folder has no password, or password matches
     const verified = !folder.password || folder.password === password;
 
     this.logger.log(`Password verification result: ${verified}`);
-    return { verified };
+    return {verified};
   }
 
   async create(data: CreateFolderDto) {
     this.logger.log(`Creating folder: ${JSON.stringify(data)}`);
-    return await this.prisma.folder.create({ data });
+    return this.prisma.folder.create({data});
   }
 
   async remove(id: string) {
@@ -83,32 +87,22 @@ export class FoldersService {
     try {
       // First, find all media in this folder to delete the physical files
       const media = await this.prisma.media.findMany({
-        where: { folderId: id },
+        where: {
+          folderId: id,
+          deleted: false
+        },
       });
 
       this.logger.log(`Found ${media.length} media files to delete`);
 
-      // Delete physical files
       for (const item of media) {
-        if (item.url) {
-          this.logger.log(`Removing file: ${item.url}`);
-          // Extract filename from the URL
-          const filename = item.url.split('/').pop();
-          if (filename) {
-            // Delete the file
-            const filePath = path.join('./uploads', filename);
-            if (fs.existsSync(filePath)) {
-              fs.unlinkSync(filePath);
-              this.logger.log(`File ${filePath} deleted successfully`);
-            } else {
-              this.logger.warn(`File not found: ${filePath}`);
-            }
-          }
-        }
+        await this.mediaService.remove(item.id);
       }
 
-      // Delete the folder (this will cascade delete the media entries in the database)
-      return await this.prisma.folder.delete({ where: { id } });
+      return await this.prisma.folder.update({
+        where: {id},
+        data: {deleted: true}
+      });
     } catch (error) {
       this.logger.error(`Error removing folder: ${error.message}`);
       throw error;

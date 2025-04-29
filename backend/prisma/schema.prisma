@@ -14,6 +14,7 @@ model Folder {
   createdBy String
   password  String?
   createdAt DateTime @default(now())
+  deleted   Boolean  @default(false)
   media     Media[]
 }
 
