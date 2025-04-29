@@ -182,6 +182,61 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
     return;
   };
 
+  async function downloadBlob(blobOrUrl: Blob | string, filename: string = 'download'): Promise<void> {
+    let blob: Blob;
+
+    if (typeof blobOrUrl === 'string') {
+      // Fetch the Blob from the Blob URL
+      const response = await fetch(blobOrUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch Blob from URL: ${response.statusText}`);
+      }
+      blob = await response.blob();
+    } else {
+      // Use the Blob directly
+      blob = blobOrUrl;
+    }
+
+    // Create a Blob URL
+    const blobUrl = URL.createObjectURL(blob);
+
+    // Create a temporary anchor element
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename;
+
+    // Append the anchor to the document body
+    document.body.appendChild(link);
+
+    // Programmatically trigger a click on the anchor
+    link.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+      })
+    );
+
+    // Clean up: remove the anchor and revoke the Blob URL after a short delay
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    }, 100);
+  }
+
+  async function handleDownload (item: MediaItem) {
+    // Check if we already have the blob URL
+    if (blobUrls[item.id]) {
+      await downloadBlob(blobUrls[item.id], item.originalFilename);
+    } else {
+      // Fetch the blob URL first
+      const blobUrl = await fetch(getFullUrl(item.url)).then((res) =>
+        res.blob(),
+      );
+      await downloadBlob(blobUrl, item.originalFilename);
+    }
+  }
+
   return (
     <>
       {folderId && currentItems.length > 0 && (
@@ -398,12 +453,10 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
                       onClick={(e) => {
                         //TODO finish this.
                         e.stopPropagation();
-                        const link = document.createElement("a");
-                        link.href = getFullUrl(item.url); // Replace with your URL logic
-                        link.download = "image.jpg"; // Specify a default filename
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
+                        // TODO here we must check if we already have the blob, otherwise
+                        //  urgently launch a fetch for it and make a loader in the front.
+                        //  ==> actually I think this is done now, need to check if it works
+                        handleDownload(item);
                       }}
                       sx={{
                         padding: { xs: 0.75, sm: 0.85, md: 1 },
@@ -478,6 +531,7 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
           onClose={() => setViewerOpen(false)}
           existingBlobUrls={blobUrls}
           handleDelete={handleDelete}
+          handleDownload={handleDownload}
           onUpdateBlobUrls={(newBlobUrls) => {
             // Use a function form of setState to avoid dependency on current blobUrls
             // This prevents infinite render loops

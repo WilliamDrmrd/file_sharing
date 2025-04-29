@@ -26,6 +26,7 @@ interface MediaViewerProps {
   open: boolean;
   onClose: () => void;
   handleDelete: (id: string) => Promise<void>;
+  handleDownload: (item: MediaItem) => Promise<void>;
   existingBlobUrls?: { [key: string]: string };
   onUpdateBlobUrls?: (urls: { [key: string]: string }) => void;
 }
@@ -36,6 +37,7 @@ export default function MediaViewer({
   open,
   onClose,
   handleDelete,
+  handleDownload,
   existingBlobUrls = {},
   onUpdateBlobUrls,
 }: MediaViewerProps) {
@@ -254,19 +256,14 @@ export default function MediaViewer({
   };
 
   // Handle download
-  const handleDownload = async (e: React.MouseEvent) => {
+  const downloadFile = async (e: React.MouseEvent) => {
     e.stopPropagation();
 
     if (!currentItem) return;
 
     try {
       setDownloading(true);
-
-      // Create an anchor element and trigger download
-      window.open(
-        `${getFullUrl(currentItem.url)}`,
-        "_blank",
-      );
+      handleDownload(currentItem);
     } catch (error) {
       console.error("Error downloading file:", error);
     } finally {
@@ -471,7 +468,7 @@ export default function MediaViewer({
                   <Download />
                 )
               }
-              onClick={handleDownload}
+              onClick={downloadFile}
               disabled={downloading}
               sx={{ color: "white", mr: 1 }}
             >
