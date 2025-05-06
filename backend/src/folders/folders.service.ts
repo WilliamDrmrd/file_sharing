@@ -113,7 +113,7 @@ export class FoldersService {
   }
 
   async getCloudBearerToken() {
-    const targetAudience = 'https://zip-snapshare-dev-422509752350.asia-northeast2.run.app';
+    const targetAudience = 'https://zip-snapshare-422509752350.asia-northeast2.run.app';
 
     try {
       const client = await this.auth.getIdTokenClient(targetAudience);
@@ -142,7 +142,7 @@ export class FoldersService {
       return null;
     }
 
-    return fetch(`https://zip-snapshare-dev-422509752350.asia-northeast2.run.app`, {
+    return fetch(`https://zip-snapshare-422509752350.asia-northeast2.run.app`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${await this.getCloudBearerToken()}`,

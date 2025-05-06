@@ -226,9 +226,18 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
     }
     setDownloadingZip(true);
     const response: {zipFileName: string} = await getZip(folderId);
-    await downloadBlob("https://storage.googleapis.com/file-sharing-ku-zips/" + response.zipFileName, response.zipFileName);
+    downloadFile("https://storage.googleapis.com/file-sharing-ku-zips/" + response.zipFileName, response.zipFileName);
     setDownloadingZip(false);
   };
+
+  function downloadFile(url: string, filename: string): void {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 
   async function handleDownload (item: MediaItem) {
     // Check if we already have the blob URL

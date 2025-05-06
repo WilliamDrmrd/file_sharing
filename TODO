@@ -1,5 +1,7 @@
 TOP PRIORITY
 
+    the zip must not be created again if the content hasn't changed.
+
     add a loading when uploading photos and find a wayto close instant the add files.
 
     preload_little versions before clicking on them, fetch the big version one by one with 3 in advance.
@@ -52,3 +54,4 @@ check if when we create image with same name it works
 LOWEST
 
 primary key in the link when in a folder ?
+
