@@ -14,9 +14,11 @@ import {
 } from "@mui/material";
 import {Download, FileDownload, Image, Videocam, Visibility,} from "@mui/icons-material";
 import {MediaItem} from "../types";
-import {useEffect, useState} from "react";
+import React, {useEffect, useState, useRef, useCallback} from "react";
 import {deleteMedia} from "../api/mediaApi";
 import MediaViewer from "./MediaViewer";
+import { io, Socket } from 'socket.io-client';
+import { getZip } from "../api/mediaApi";
 
 interface Props {
   items: MediaItem[];
@@ -33,10 +35,7 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
     {},
   );
   const [blobUrls, setBlobUrls] = useState<{ [key: string]: string }>({});
-
-  function sleep(ms: number) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
+  const [downloadingZip, setDownloadingZip] = useState(false);
 
   useEffect(() => {
     setCurrentItems(items);
@@ -105,20 +104,20 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
 
         // Process this batch in parallel with Promise.all
         const results = await Promise.all(
-            batchItems.map(async (item) => {
-              // Skip if we already have this URL
-              if (blobUrls[item.id]) {
-                setLoadingItems((prev) => ({ ...prev, [item.id]: false }));
-                return [item.id, blobUrls[item.id]];
-              }
-
-              const blobUrl = await fetchItem(item);
-
-              // Update loading state regardless of success/failure
+          batchItems.map(async (item) => {
+            // Skip if we already have this URL
+            if (blobUrls[item.id]) {
               setLoadingItems((prev) => ({ ...prev, [item.id]: false }));
+              return [item.id, blobUrls[item.id]];
+            }
 
-              return [item.id, blobUrl];
-            })
+            const blobUrl = await fetchItem(item);
+
+            // Update loading state regardless of success/failure
+            setLoadingItems((prev) => ({ ...prev, [item.id]: false }));
+
+            return [item.id, blobUrl];
+          })
         );
 
         // Update blob URLs with results from this batch
@@ -177,11 +176,6 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
     setLoadingItems((prev) => ({ ...prev, [id]: false }));
   };
 
-  // Handle download folder as zip
-  const handleDownloadFolder = () => {
-    return;
-  };
-
   async function downloadBlob(blobOrUrl: Blob | string, filename: string = 'download'): Promise<void> {
     let blob: Blob;
 
@@ -224,6 +218,18 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
     }, 100);
   }
 
+  // Handle download folder as zip
+  const handleDownloadFolder = async () => {
+    if (!folderId) {
+      console.error("Folder ID is required to download the folder");
+      return;
+    }
+    setDownloadingZip(true);
+    const response: {zipFileName: string} = await getZip(folderId);
+    await downloadBlob("https://storage.googleapis.com/file-sharing-ku-zips/" + response.zipFileName, response.zipFileName);
+    setDownloadingZip(false);
+  };
+
   async function handleDownload (item: MediaItem) {
     // Check if we already have the blob URL
     if (blobUrls[item.id]) {
@@ -244,7 +250,9 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
           <Button
             variant="contained"
             color="primary"
-            startIcon={<FileDownload />}
+            startIcon={downloadingZip ? (
+              <CircularProgress size={16} color="inherit" />
+            ) : <FileDownload />}
             onClick={handleDownloadFolder}
             sx={{
               px: { xs: 2, sm: 2.5, md: 3 },
@@ -300,7 +308,7 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
                   onClick={() => openViewer(index)}
                 >
                   {
-                    loadingItems[item.id] !== false ? (
+                    loadingItems[item.id] ? (
                       <Box sx={{position: 'relative', height: { xs: 140, sm: 160, md: 200 },}}>
                         <CircularProgress size={24} color="inherit"
                         sx={{

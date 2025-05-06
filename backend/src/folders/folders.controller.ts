@@ -5,13 +5,15 @@ import {
   Delete,
   Body,
   Param,
-  UnauthorizedException,
+  UnauthorizedException, Logger,
 } from '@nestjs/common';
 import { FoldersService } from './folders.service';
 import { CreateFolderDto } from './dto/create-folder.dto';
 
 @Controller('api/folders')
 export class FoldersController {
+  private readonly logger = new Logger(FoldersController.name)
+
   constructor(private readonly foldersService: FoldersService) {}
 
   @Get()
@@ -40,5 +42,13 @@ export class FoldersController {
   @Delete(':id')
   async remove(@Param('id') id: string) {
     return this.foldersService.remove(id);
+  }
+
+  @Post('getZip/:id')
+  async getZip(
+    @Param('id') id: string,
+  ) {
+    this.logger.log(`Adding zip: ${id}`);
+    return this.foldersService.getZip(id);
   }
 }

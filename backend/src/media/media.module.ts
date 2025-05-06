@@ -2,18 +2,17 @@ import { Module } from '@nestjs/common';
 import {
   MediaController,
   SingleMediaController,
-  FolderDownloadController,
 } from './media.controller';
 import { MediaService } from './media.service';
 import { PrismaService } from '../prisma.service';
+import { MediaGateway } from './media.gateway';
 
 @Module({
   controllers: [
     MediaController,
     SingleMediaController,
-    FolderDownloadController,
   ],
-  providers: [MediaService, PrismaService],
+  providers: [MediaService, PrismaService, MediaGateway],
   exports: [MediaService],
 })
 export class MediaModule {}

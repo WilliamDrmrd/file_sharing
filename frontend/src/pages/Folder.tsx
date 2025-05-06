@@ -281,7 +281,7 @@ export default function Folder() {
 
           <Box>
             <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-              Folder Content
+              {folder?.name || "Folder Content"}
             </Typography>
             <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
               {!loading && (

@@ -9,24 +9,12 @@ import {
   Param,
   Post,
   Res,
-  StreamableFile,
-  UploadedFiles,
-  UseInterceptors,
 } from '@nestjs/common';
 import { MediaService } from './media.service';
 import { PrismaService } from '../prisma.service';
-import { FilesInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import * as path from 'path';
-import { extname } from 'path';
-import { randomUUID } from 'crypto';
-import * as fs from 'fs';
-import { Response } from 'express';
-import * as archiver from 'archiver';
-
-import 'multer';
 import { GenerateSignedUrlDto } from './dto/generate-signed-url.dto';
 import { UploadCompleteDto } from './dto/upload-complete.dto';
+import {MediaGateway} from "./media.gateway";
 
 @Controller('api/folders/:folderId/media')
 export class MediaController {
@@ -111,30 +99,26 @@ export class SingleMediaController {
   constructor(
       private readonly mediaService: MediaService,
       private readonly prisma: PrismaService,
+      private readonly mediaGateway: MediaGateway,
   ) {
+  }
+
+  @Post('addThumbnail')
+  async addThumbnail(
+      @Body('fileName') fileName: string,
+      @Body('thumbnailUrl') thumbnailUrl: string,
+  ) {
+    this.logger.log(`Adding thumbnail: ${fileName}`);
+    this.mediaService.thumbnailProcessed.set(fileName, thumbnailUrl);
+    if (this.mediaGateway.notifyFileProcessed(fileName, thumbnailUrl)) {
+      this.logger.log(`Thumbnail processed: ${fileName}`);
+      this.mediaService.thumbnailProcessed.delete(fileName);
+    }
   }
 
   @Delete(':mediaId')
   async deleteOne(@Param('mediaId') mediaId: string) {
     this.logger.log(`Deleting single media: ${mediaId}`);
     return this.mediaService.remove(mediaId);
-  }
-}
-
-@Controller('api/folders/:folderId')
-export class FolderDownloadController {
-  private readonly logger = new Logger(FolderDownloadController.name);
-
-  constructor(
-      private readonly mediaService: MediaService,
-      private readonly prisma: PrismaService,
-  ) {
-  }
-
-  @Get('download')
-  async downloadFolder(
-      @Param('folderId') folderId: string,
-      @Res() res: Response,
-  ) {
   }
 }

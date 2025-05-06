@@ -1,11 +1,14 @@
-import {Injectable, Logger} from '@nestjs/common';
+import {Injectable, Logger, UnauthorizedException} from '@nestjs/common';
 import {PrismaService} from '../prisma.service';
 import {CreateFolderDto} from './dto/create-folder.dto';
 import {MediaService} from '../media/media.service';
+import {Folder, Media} from "@prisma/client";
+import {GoogleAuth} from 'google-auth-library';
 
 @Injectable()
 export class FoldersService {
   private readonly logger = new Logger(FoldersService.name);
+  private readonly auth = new GoogleAuth();
 
   constructor(private prisma: PrismaService,
               private mediaService: MediaService) {
@@ -107,5 +110,71 @@ export class FoldersService {
       this.logger.error(`Error removing folder: ${error.message}`);
       throw error;
     }
+  }
+
+  async getCloudBearerToken() {
+    const targetAudience = 'https://zip-snapshare-dev-422509752350.asia-northeast2.run.app';
+
+    try {
+      const client = await this.auth.getIdTokenClient(targetAudience);
+      return await client.idTokenProvider.fetchIdToken(targetAudience);
+    } catch (error) {
+      this.logger.error(`Error fetching ID token: ${error.message}`);
+      throw new UnauthorizedException('Failed to fetch ID token');
+    }
+  }
+
+  async getZip(folderId: string) {
+    this.logger.log(`Creating zip for folder: ${folderId}`);
+    const folder = await this.prisma.folder.findUnique({
+      where: {id: folderId},
+      include: {
+        media: {
+          where: {
+            deleted: false
+          }
+        },
+      },
+    }) as Folder & { media: Media[] } | null;
+
+    if (!folder) {
+      this.logger.warn(`Folder not found for zipping: ${folderId}`);
+      return null;
+    }
+
+    return fetch(`https://zip-snapshare-dev-422509752350.asia-northeast2.run.app`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${await this.getCloudBearerToken()}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        files: folder.media.map((m) => m.originalFilename),
+        folderName: folder.name,
+      }),
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          if (response.body) {
+            const reader = response.body.getReader();
+            let result = '';
+
+            while (true) {
+              const {done, value} = await reader.read();
+              if (done) break;
+              result += new TextDecoder().decode(value); // Decode the chunk into a string.
+            }
+            console.error('Error response:', result);
+          }
+          console.error(response);
+          throw new Error('Failed to create zip');
+        }
+        this.logger.log(`Zip created successfully for folder: ${folderId}`);
+        return response.json();
+      })
+      .catch((error) => {
+        this.logger.error(`Error creating zip: ${error.message}`);
+        throw error;
+      });
   }
 }

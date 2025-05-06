@@ -213,3 +213,17 @@ export async function verifyFolderPassword(
     return false;
   }
 }
+
+export async function getZip(folderId: string): Promise<{ zipFileName: string }> {
+  const response = await fetch(`${API_BASE_URL}/folders/getZip/${folderId}`, {
+    method: "POST",
+    headers: {
+      "ngrok-skip-browser-warning": "true",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to get zip");
+  }
+  return await response.json() as Promise<{zipFileName: string}>;
+}
