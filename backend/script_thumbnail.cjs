@@ -24,7 +24,7 @@ async function sendFilesToCloudRun() {
   const promises = fileNames.map(async (file) => {
     const fileEvent = {
       name: file.originalFilename,
-      bucket: 'file-sharing-ku-dev', // Replace with your bucket name
+      bucket: process.env.GCLOUD_BUCKET_NAME, // Replace with your bucket name
     };
 
     try {
