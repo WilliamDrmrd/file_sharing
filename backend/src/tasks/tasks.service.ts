@@ -87,10 +87,10 @@ export class TasksService implements OnModuleInit {
             process.env.GCLOUD_BUCKET_NAME || 'default-bucket-name',
             file.originalFilename
           );
-          const thumbnailUrl = await this.generateSignedUrlRead(
+          const thumbnailUrl = file.thumbnailUrl ? (await this.generateSignedUrlRead(
             process.env.GCLOUD_BUCKET_NAME_THUMBNAIL || 'default-bucket-name',
             file.thumbnailUrl
-          );
+          )) : "";
 
           return this.prisma.media.update({
             where: { id: file.id },
