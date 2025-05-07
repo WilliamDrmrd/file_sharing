@@ -79,7 +79,7 @@ export class TasksService implements OnModuleInit {
     await Promise.all(
       media.map(async (file) => {
         try {
-          if (!file.originalFilename || !file.thumbnailUrl) {
+          if (!file.originalFilename) {
             this.logger.warn(`File ${file.id} does not have an original filename.`);
             return;
           }
