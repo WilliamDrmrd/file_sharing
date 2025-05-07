@@ -1,3 +1,11 @@
+---------------------------------------------------------------------------------------------------
+
+FULLY AUTOMATIC BUG MOST IMPORTANT
+
+    if two pictures same name they get same name in google cloud and override the other
+
+---------------------------------------------------------------------------------------------------
+
 TOP PRIORITY
 
     the zip must not be created again if the content hasn't changed.
@@ -40,13 +48,17 @@ LOW PRIORITY
 
     load the photos before videos.
 
+    maybe add cron or a system to have the zip already made.
+
 ---------------------------------------------------------------------------------------------------
 
 BUGFIXES
 
-check if when we create image with same name it works
+check if when we create image with same name it works ==> no it doesnt.
     check if when we create image with same name of a deleted one, it works, because then
-        if we delete the new one it will try to have the same name as the deleted.
+    if we delete the new one it will try to have the same name as the deleted.
+
+if we have two folder with same name we can't have two different zips in the bucket.
 
 
 ---------------------------------------------------------------------------------------------------
@@ -54,4 +66,6 @@ check if when we create image with same name it works
 LOWEST
 
 primary key in the link when in a folder ?
+put links of the cloud run services in env
+
 

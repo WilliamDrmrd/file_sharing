@@ -26,7 +26,7 @@ export class MediaService {
    * @param contentType The MIME type of the file.
    * @returns A signed URL string.
    */
-  async generateSignedUrl(
+  async generateSignedUrlWrite(
     filename: string,
     contentType: string,
   ): Promise<{ url: string; finalFilename: string }> {
@@ -74,17 +74,40 @@ export class MediaService {
     }
   }
 
+  async generateSignedUrlRead(bucketName: string, filename: string): Promise<string> {
+    const options = {
+      version: 'v4' as 'v4',
+      action: 'read' as 'read',
+      expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 1 year expiration (maximum recommended)
+    };
+
+    try {
+      const [url] = await this.storage
+      .bucket(bucketName)
+      .file(filename)
+      .getSignedUrl(options);
+
+      console.log(`Generated signed URL for ${filename}: ${url}`);
+      return url;
+    } catch (error) {
+      console.error('Error generating signed URL:', error);
+      throw error;
+    }
+  }
+
   async handleUploadComplete(data: UploadCompleteDto): Promise<Media> {
     if (!data.filename) {
       this.logger.error('Filename is required to confirm upload completion.');
       throw new Error('Filename is required');
     }
 
+    const url = await this.generateSignedUrlRead(this.bucketName, data.filename);
+
     this.logger.log(`File ${data.filename} upload complete`);
     return this.prisma.media.create({
       data: {
         folderId: data.folderId,
-        url: `https://storage.googleapis.com/${this.bucketName}/${data.filename}`,
+        url: url,
         type: data.type,
         uploadedBy: data.uploadedBy,
         originalFilename: data.filename,

@@ -5,9 +5,10 @@ import { AdminModule } from './admin/admin.module';
 import { PrismaService } from './prisma.service';
 import { LoggerService } from './logger.service';
 import { ConfigModule } from '@nestjs/config';
+import { TasksModule } from './tasks/tasks.module';
 
 @Module({
-  imports: [ConfigModule.forRoot(), FoldersModule, MediaModule, AdminModule],
+  imports: [ConfigModule.forRoot(), FoldersModule, MediaModule, AdminModule, TasksModule],
   providers: [PrismaService, LoggerService],
   exports: [LoggerService],
 })

@@ -4,14 +4,22 @@ import {CreateFolderDto} from './dto/create-folder.dto';
 import {MediaService} from '../media/media.service';
 import {Folder, Media} from "@prisma/client";
 import {GoogleAuth} from 'google-auth-library';
+import {Storage} from "@google-cloud/storage";
+const crypto = require('crypto');
 
 @Injectable()
 export class FoldersService {
   private readonly logger = new Logger(FoldersService.name);
   private readonly auth = new GoogleAuth();
+  private readonly storage: Storage;
 
   constructor(private prisma: PrismaService,
               private mediaService: MediaService) {
+    const projectId = process.env.GCLOUD_PROJECT_ID || 'default-project-id';
+    const keyFilename =
+      process.env.GCLOUD_KEY_FILE || '/path/to/default-key.json';
+
+    this.storage = new Storage({projectId, keyFilename});
   }
 
   async findAll() {
@@ -111,9 +119,29 @@ export class FoldersService {
       throw error;
     }
   }
+  async generateSignedUrlRead(bucketName: string, filename: string): Promise<string> {
+    const options = {
+      version: 'v4' as 'v4',
+      action: 'read' as 'read',
+      expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 1 year expiration (maximum recommended)
+    };
+
+    try {
+      const [url] = await this.storage
+      .bucket(bucketName)
+      .file(filename)
+      .getSignedUrl(options);
+
+      this.logger.log(`Generated signed URL for ${filename}`);
+      return url;
+    } catch (error) {
+      this.logger.error('Error generating signed URL:', error);
+      throw error;
+    }
+  }
 
   async getCloudBearerToken() {
-    const targetAudience = 'https://zip-snapshare-422509752350.asia-northeast2.run.app';
+    const targetAudience = process.env.ZIP_CLOUD_URL || "";
 
     try {
       const client = await this.auth.getIdTokenClient(targetAudience);
@@ -125,7 +153,6 @@ export class FoldersService {
   }
 
   async getZip(folderId: string) {
-    this.logger.log(`Creating zip for folder: ${folderId}`);
     const folder = await this.prisma.folder.findUnique({
       where: {id: folderId},
       include: {
@@ -136,13 +163,26 @@ export class FoldersService {
         },
       },
     }) as Folder & { media: Media[] } | null;
-
     if (!folder) {
       this.logger.warn(`Folder not found for zipping: ${folderId}`);
       return null;
     }
 
-    return fetch(`https://zip-snapshare-422509752350.asia-northeast2.run.app`, {
+    const fileNames = folder.media.reduce(
+      (acc, item) => {
+        acc += item.originalFilename;
+        return acc;
+      },
+      ""
+    );
+    const hash = crypto.createHash('sha256').update(fileNames, 'utf8').digest('hex');
+    if (folder.zipHash === hash) {
+      this.logger.log(`Same Zip Hash found for zipping: ${hash}`);
+      return {zipFileName: folder.zipUrl};
+    }
+
+    this.logger.log(`Creating zip for folder: ${folderId}`);
+    return fetch(process.env.ZIP_CLOUD_URL || "", {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${await this.getCloudBearerToken()}`,
@@ -164,13 +204,25 @@ export class FoldersService {
               if (done) break;
               result += new TextDecoder().decode(value); // Decode the chunk into a string.
             }
-            console.error('Error response:', result);
+            this.logger.error('Error response:', result);
           }
-          console.error(response);
+          this.logger.error(response);
           throw new Error('Failed to create zip');
         }
         this.logger.log(`Zip created successfully for folder: ${folderId}`);
-        return response.json();
+
+        const zipUrl = (await response.json() as {zipFileName: string}).zipFileName
+        const url = await this.generateSignedUrlRead(process.env.GCLOUD_BUCKET_NAME_ZIP || "", zipUrl);
+        this.logger.log(`Signed URL generated successfully for folder: ${folderId}`);
+
+        await this.prisma.folder.update({
+          where: {id: folderId},
+          data: {
+            zipUrl: url,
+            zipHash: hash
+          }
+        })
+        return {zipFileName: url};
       })
       .catch((error) => {
         this.logger.error(`Error creating zip: ${error.message}`);

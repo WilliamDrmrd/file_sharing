@@ -49,7 +49,7 @@ export class MediaController {
       }
 
       try {
-        const signedUrl = await this.mediaService.generateSignedUrl(
+        const signedUrl = await this.mediaService.generateSignedUrlWrite(
           filename,
           contentType,
         );

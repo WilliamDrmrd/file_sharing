@@ -214,7 +214,7 @@ export async function verifyFolderPassword(
   }
 }
 
-export async function getZip(folderId: string): Promise<{ zipFileName: string }> {
+export async function getZip(folderId: string): Promise<string> {
   const response = await fetch(`${API_BASE_URL}/folders/getZip/${folderId}`, {
     method: "POST",
     headers: {
@@ -225,5 +225,6 @@ export async function getZip(folderId: string): Promise<{ zipFileName: string }>
   if (!response.ok) {
     throw new Error("Failed to get zip");
   }
-  return await response.json() as Promise<{zipFileName: string}>;
+  const {zipFileName} = await response.json() as {zipFileName: string};
+  return zipFileName;
 }

@@ -225,8 +225,8 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
       return;
     }
     setDownloadingZip(true);
-    const response: {zipFileName: string} = await getZip(folderId);
-    downloadFile("https://storage.googleapis.com/file-sharing-ku-zips/" + response.zipFileName, response.zipFileName);
+    const zipFileName = await getZip(folderId);
+    downloadFile(zipFileName, zipFileName);
     setDownloadingZip(false);
   };
 
