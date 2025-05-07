@@ -24,6 +24,7 @@ model Media {
   id               String    @id @default(uuid())
   folderId         String
   url              String
+  thumbnailUrl     String    @default("")
   type             MediaType
   uploadedAt       DateTime  @default(now())
   uploadedBy       String

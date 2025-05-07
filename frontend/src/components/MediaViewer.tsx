@@ -85,7 +85,7 @@ export default function MediaViewer({
       // Create and store the promise
       const fetchPromise = (async () => {
         try {
-          const response = await fetch(getFullUrl(item.url));
+          const response = await fetch(item.url);
 
           if (!response.ok) {
             throw new Error(`Failed to fetch media: ${response.statusText}`);
@@ -144,7 +144,7 @@ export default function MediaViewer({
         // Load adjacent items in parallel
         if (adjacentItems.length > 0) {
           const adjacentPromises = adjacentItems.map(async (item) => {
-            const itemUrl = await fetchMediaItem(item);
+              const itemUrl = await fetchMediaItem(item);
             if (itemUrl) {
               setBlobUrls((prev) => ({
                 ...prev,

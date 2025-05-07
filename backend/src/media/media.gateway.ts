@@ -30,9 +30,18 @@ export class MediaGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.clients_files.set(client.id, new Set());
 
     // Listen for file subscriptions
-    client.on('subscribeToFile', (fileName: string) => {
-      if (this.mediaService.thumbnailProcessed.get(fileName)) {
-        this.notifyFileProcessed(fileName, this.mediaService.thumbnailProcessed.get(fileName) || "");
+    client.on('subscribeToFile', async (fileName: string) => {
+      //TODO change this its not findfirst
+      const media = await this.prisma.media.findFirst({
+        where: {
+          originalFilename: fileName,
+          deleted: false
+        }
+      });
+      if (!media)
+        return this.logger.error(`File not found: ${fileName}`);
+      if (media.thumbnailUrl !== "") {
+        this.notifyFileProcessed(fileName, media.thumbnailUrl);
         return;
       }
       const fileNames = this.clients_files.get(client.id);

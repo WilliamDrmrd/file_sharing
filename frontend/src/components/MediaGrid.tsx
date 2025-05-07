@@ -31,11 +31,69 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
   const [currentItems, setCurrentItems] = useState<MediaItem[]>(items);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
-  const [loadingItems, setLoadingItems] = useState<{ [key: string]: boolean }>(
-    {},
-  );
+  const [loadingItems, setLoadingItems] = useState<{ [key: string]: boolean }>({});
+  const [thumbnailBlobUrls, setThumbnailBlobUrls] = useState<{ [key: string]: string }>({});
   const [blobUrls, setBlobUrls] = useState<{ [key: string]: string }>({});
   const [downloadingZip, setDownloadingZip] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
+
+  // Initialize WebSocket connection
+  const initializeSocket = useCallback(() => {
+    // Close existing socket if any
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+    }
+
+    // Connect to WebSocket server
+    socketRef.current = io(process.env.REACT_APP_API_URL || "http://localhost:3000");
+
+    // Set up event listeners
+    socketRef.current.on('connect', () => {
+      console.log('Connected to WebSocket server');
+    });
+
+    socketRef.current.on('disconnect', () => {
+      console.log('Disconnected from WebSocket server');
+    });
+
+    return socketRef.current;
+  }, []);
+
+    const subscribeToFileUpdates = useCallback((fileName: string | undefined): Promise<string> => {
+    if (!fileName) {
+      return Promise.reject(new Error("File name is required"));
+    }
+    return new Promise((resolve, reject) => {
+      const socket = socketRef.current || initializeSocket();
+
+      // Subscribe to this specific file
+      socket.emit('subscribeToFile', fileName);
+
+      // Listen for file processed event
+      socket.on('fileProcessed_' + fileName, (data: { fileName: string, status: string, thumbnailUrl: string }) => {
+        if (data.fileName === fileName && data.status === 'complete') {
+          resolve(data.thumbnailUrl);
+        }
+      });
+
+      // Set up error and timeout handling
+      socket.on('error', (error: any) => {
+        reject(new Error(`WebSocket error: ${error}`));
+      });
+
+      // Optional: Set up a timeout
+      const timeout = setTimeout(() => {
+        reject(new Error('WebSocket timeout waiting for file processing'));
+      }, 5 * 60 * 1000); // 5 minute timeout
+
+      // Clean up function to remove listeners
+      return () => {
+        socket.off('fileProcessed_' + fileName);
+        socket.off('error');
+        clearTimeout(timeout);
+      };
+    });
+  }, [initializeSocket]);
 
   useEffect(() => {
     setCurrentItems(items);
@@ -66,7 +124,8 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
       // Start a new fetch request
       const fetchPromise = (async () => {
         try {
-          const response = await fetch(getFullUrl(item.url));
+          console.log("thumbnailURL:", item.thumbnailUrl);
+          const response = await fetch(item.thumbnailUrl ? item.thumbnailUrl : item.url);
 
           if (!response.ok) {
             throw new Error(`HTTP error ${response.status}`);
@@ -94,7 +153,7 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
 // Process items in batches to avoid overwhelming the browser
     const processInBatches = async () => {
       const batchSize = 3; // Process 3 items per batch
-      const newBlobUrls: { [key: string]: string } = { ...blobUrls };
+      const newBlobUrls: { [key: string]: string } = { ...thumbnailBlobUrls };
 
       // Process in batches
       for (let i = 0; i < currentItems.length; i += batchSize) {
@@ -106,9 +165,9 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
         const results = await Promise.all(
           batchItems.map(async (item) => {
             // Skip if we already have this URL
-            if (blobUrls[item.id]) {
+            if (thumbnailBlobUrls[item.id]) {
               setLoadingItems((prev) => ({ ...prev, [item.id]: false }));
-              return [item.id, blobUrls[item.id]];
+              return [item.id, thumbnailBlobUrls[item.id]];
             }
 
             const blobUrl = await fetchItem(item);
@@ -126,7 +185,7 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
         });
 
         // Update our state after each batch
-        setBlobUrls({ ...newBlobUrls });
+        setThumbnailBlobUrls({ ...newBlobUrls });
 
         // Optional: Add a small delay between batches to prevent UI freezing
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -140,7 +199,7 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
     return () => {
       // Only revoke URLs that are no longer needed
       const currentIds = new Set(currentItems.map((item) => item.id));
-      Object.entries(blobUrls).forEach(([id, url]) => {
+      Object.entries(thumbnailBlobUrls).forEach(([id, url]) => {
         if (!currentIds.has(id)) {
           URL.revokeObjectURL(url);
         }
@@ -155,14 +214,6 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
     } catch (error) {
       console.error("Error deleting media:", error);
     }
-  };
-
-  // Prepend domain if the URL is relative
-  const getFullUrl = (url: string) => {
-    if (url.startsWith("/")) {
-      return `${process.env.REACT_APP_API_URL || "http://localhost:3000"}${url}`;
-    }
-    return url;
   };
 
   // Open the media viewer
@@ -245,7 +296,7 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
       await downloadBlob(blobUrls[item.id], item.originalFilename);
     } else {
       // Fetch the blob URL first
-      const blobUrl = await fetch(getFullUrl(item.url)).then((res) =>
+      const blobUrl = await fetch(item.url).then((res) =>
         res.blob(),
       );
       await downloadBlob(blobUrl, item.originalFilename);
@@ -333,7 +384,7 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
                         {(isImage ? (
                           <CardMedia
                             component="img"
-                            src={blobUrls[item.id]}
+                            src={thumbnailBlobUrls[item.id]}
                             sx={{
                               height: '100%',
                               objectFit: 'cover',
@@ -343,10 +394,8 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
                           />
                         ) : (
                           <CardMedia
-                            component="video"
-                            src={blobUrls[item.id]}
-                            preload="metadata"
-                            muted
+                            component="img"
+                            src={thumbnailBlobUrls[item.id]}
                             sx={{
                               height: { xs: 140, sm: 160, md: 200 },
                               objectFit: "cover",

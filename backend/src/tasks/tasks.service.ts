@@ -1,5 +1,5 @@
 import {Injectable, Logger, OnModuleInit} from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import { Storage } from "@google-cloud/storage";
 import {PrismaService} from "../prisma.service";
 
@@ -16,10 +16,29 @@ export class TasksService implements OnModuleInit {
     this.storage = new Storage({projectId, keyFilename});
   }
 
+  async generateFileWithNames() {
+    const fileNames = await this.prisma.media.findMany({
+      where: {
+        deleted: false,
+      },
+      select: {
+        originalFilename: true,
+      },
+    });
+    const fs = require('fs');
+
+    const filePath = './fileNames.json';
+    fs.writeFileSync(filePath, JSON.stringify(fileNames, null, 2), 'utf-8');
+    this.logger.log(`File with names generated at ${filePath}`);
+  }
+
   async onModuleInit() {
-    this.logger.log("Application started, updatingSignedUrls...");
-    // this disabled because too many requests to the server
-    await this.updateSignedUrls();
+    this.logger.log("Application started");
+    // Uncomment this if you want to update signed URLs on application start
+    // await this.updateSignedUrls();
+
+    // Uncomment this if you want to generate a file with all filenames
+    // await this.generateFileWithNames();
   }
 
   // This will run every 7 days (weekly)
@@ -60,7 +79,7 @@ export class TasksService implements OnModuleInit {
     await Promise.all(
       media.map(async (file) => {
         try {
-          if (!file.originalFilename) {
+          if (!file.originalFilename || !file.thumbnailUrl) {
             this.logger.warn(`File ${file.id} does not have an original filename.`);
             return;
           }
@@ -68,10 +87,14 @@ export class TasksService implements OnModuleInit {
             process.env.GCLOUD_BUCKET_NAME || 'default-bucket-name',
             file.originalFilename
           );
+          const thumbnailUrl = await this.generateSignedUrlRead(
+            process.env.GCLOUD_BUCKET_NAME_THUMBNAIL || 'default-bucket-name',
+            file.thumbnailUrl
+          );
 
           return this.prisma.media.update({
             where: { id: file.id },
-            data: { url },
+            data: { url, thumbnailUrl },
           });
         } catch (error) {
           this.logger.error(`Failed generate signed url for file ${file.id}: ${error.message}`);
@@ -105,7 +128,6 @@ export class TasksService implements OnModuleInit {
   }
 
   private async updateSignedUrls() {
-
     try {
       await this.updateMedias();
       this.logger.log('--Successfully updated signed URLs for all media files.');

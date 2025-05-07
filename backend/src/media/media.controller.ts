@@ -109,11 +109,13 @@ export class SingleMediaController {
       @Body('thumbnailUrl') thumbnailUrl: string,
   ) {
     this.logger.log(`Adding thumbnail: ${fileName}`);
-    this.mediaService.thumbnailProcessed.set(fileName, thumbnailUrl);
-    if (this.mediaGateway.notifyFileProcessed(fileName, thumbnailUrl)) {
-      this.logger.log(`Thumbnail processed: ${fileName}`);
-      this.mediaService.thumbnailProcessed.delete(fileName);
-    }
+    await this.prisma.media.updateMany({
+      where: {originalFilename: fileName},
+      data: {
+        thumbnailUrl
+      }
+    });
+    this.mediaGateway.notifyFileProcessed(fileName, thumbnailUrl);
   }
 
   @Delete(':mediaId')

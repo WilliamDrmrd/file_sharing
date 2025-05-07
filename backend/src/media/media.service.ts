@@ -9,7 +9,6 @@ export class MediaService {
   private readonly logger = new Logger(MediaService.name);
   private readonly storage: Storage;
   private readonly bucketName: string;
-  public thumbnailProcessed: Map<string, string> = new Map();
 
   constructor(private prisma: PrismaService) {
     const projectId = process.env.GCLOUD_PROJECT_ID || 'default-project-id';

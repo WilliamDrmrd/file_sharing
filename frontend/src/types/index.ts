@@ -11,6 +11,7 @@ export interface MediaItem {
   id: string;
   folderId: string;
   url: string;
+  thumbnailUrl: string;
   type: "photo" | "video";
   uploadedAt: string;
   uploadedBy: string;
