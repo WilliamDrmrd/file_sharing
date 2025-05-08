@@ -334,6 +334,7 @@ export default function MediaViewer({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            overflow: "hidden"
           }}
         >
           {loading && (
@@ -355,11 +356,14 @@ export default function MediaViewer({
                 src={mediaSrc}
                 alt="Media preview"
                 style={{
+                  position: "absolute",
+                  top: 0,
                   maxWidth: "100%",
-                  maxHeight: "100%",
+                  maxHeight: "calc(100% - 60px)",
                   objectFit: "contain",
                   opacity: loading ? 0.3 : 1,
                   transition: "opacity 0.3s ease",
+                  zIndex: 1,
                 }}
                 onLoad={handleMediaLoaded}
               />
@@ -370,10 +374,13 @@ export default function MediaViewer({
                 autoPlay
                 preload="auto"
                 style={{
+                  position: "absolute",
+                  top: 0,
                   maxWidth: "100%",
-                  maxHeight: "100%",
+                  maxHeight: "calc(100% - 60px)",
                   opacity: loading ? 0.3 : 1,
                   transition: "opacity 0.3s ease",
+                  zIndex: 1,
                 }}
                 onLoadedMetadata={handleMediaLoaded}
               />
@@ -391,6 +398,7 @@ export default function MediaViewer({
                 bgcolor: "rgba(0,0,0,0.5)",
                 color: "white",
                 "&:hover": { bgcolor: "rgba(0,0,0,0.7)" },
+                zIndex: 2,
               }}
             >
               <ArrowBack />
@@ -408,76 +416,79 @@ export default function MediaViewer({
                 bgcolor: "rgba(0,0,0,0.5)",
                 color: "white",
                 "&:hover": { bgcolor: "rgba(0,0,0,0.7)" },
+                zIndex: 2,
               }}
             >
               <ArrowForward />
             </IconButton>
           )}
-        </Box>
 
-        {/* Bottom toolbar */}
-        <Box
-          sx={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            p: 2,
-            bgcolor: "rgba(0,0,0,0.7)",
-          }}
-        >
-          <Box>
-            <Typography variant="body2" color="white">
-              {index + 1} / {items.length}
-            </Typography>
-            {currentItem.originalFilename && (
-              <Typography
-                variant="body2"
-                color="white"
-                sx={{ opacity: 0.8, mt: 0.5 }}
-              >
-                {currentItem.originalFilename}
+          {/* Bottom toolbar */}
+          <Box
+            sx={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              p: 2,
+              bgcolor: "rgba(0,0,0,0.7)",
+              zIndex: 10,
+              height: "60px",
+            }}
+          >
+            <Box>
+              <Typography variant="body2" color="white">
+                {index + 1} / {items.length}
               </Typography>
-            )}
-          </Box>
+              {currentItem.originalFilename && (
+                <Typography
+                  variant="body2"
+                  color="white"
+                  sx={{ opacity: 0.8, mt: 0.5 }}
+                >
+                  {currentItem.originalFilename}
+                </Typography>
+              )}
+            </Box>
 
-          <Box>
-            <Button
+            <Box>
+              <Button
                 startIcon={
                   deleting ? (
-                      <CircularProgress size={16} color="inherit" />
+                    <CircularProgress size={16} color="inherit" />
                   ) : (
-                      <Delete />
+                    <Delete />
                   )
                 }
                 onClick={handleDeleteInView}
                 disabled={deleting}
                 sx={{ color: "red", mr: 1 }}
-            >
-              Delete
-            </Button>
+              >
+                Delete
+              </Button>
 
-            <Button
-              startIcon={
-                downloading ? (
-                  <CircularProgress size={16} color="inherit" />
-                ) : (
-                  <Download />
-                )
-              }
-              onClick={downloadFile}
-              disabled={downloading}
-              sx={{ color: "white", mr: 1 }}
-            >
-              Download
-            </Button>
+              <Button
+                startIcon={
+                  downloading ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : (
+                    <Download />
+                  )
+                }
+                onClick={downloadFile}
+                disabled={downloading}
+                sx={{ color: "white", mr: 1 }}
+              >
+                Download
+              </Button>
 
-            <IconButton onClick={toggleFullscreen} sx={{ color: "white" }}>
-              {fullscreen ? <FullscreenExit /> : <Fullscreen />}
-            </IconButton>
+              <IconButton onClick={toggleFullscreen} sx={{ color: "white" }}>
+                {fullscreen ? <FullscreenExit /> : <Fullscreen />}
+              </IconButton>
+            </Box>
           </Box>
         </Box>
       </DialogContent>
