@@ -384,18 +384,18 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
                         {(isImage ? (
                           <CardMedia
                             component="img"
-                            src={thumbnailBlobUrls[item.id]}
+                            src={item.thumbnailUrl ? thumbnailBlobUrls[item.id] : item.url}
                             sx={{
-                              height: '100%',
+                              height: { xs: 140, sm: 160, md: 200 },
                               objectFit: 'cover',
                               transition: 'opacity 0.3s ease',
                             }}
                             onLoadedMetadata={() => handleImageLoad(item.id)}
                           />
-                        ) : (
+                        ) : ( item.thumbnailUrl ? (
                           <CardMedia
                             component="img"
-                            src={thumbnailBlobUrls[item.id]}
+                            src={item.thumbnailUrl}
                             sx={{
                               height: { xs: 140, sm: 160, md: 200 },
                               objectFit: "cover",
@@ -403,6 +403,18 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
                             }}
                             onLoadedMetadata={() => handleImageLoad(item.id)}
                           />
+                        ) : (
+                          <CardMedia
+                            component="video"
+                            src={item.url}
+                            sx={{
+                              height: { xs: 140, sm: 160, md: 200 },
+                              objectFit: "cover",
+                              transition: "transform 0.3s ease",
+                            }}
+                            onLoadedMetadata={() => handleImageLoad(item.id)}
+                          />
+                          )
                         ))}
                       </Box>
                     )

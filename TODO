@@ -11,12 +11,13 @@ TOP PRIORITY
 
     ask name when delete, just ask if they are sure or not, too.
 
-     fix sur le pc et meme peut etre sur le tel quand on regarde une video faut pas que la barre
-            en bas elle empeche de pouvoir appuyer sur les boutons.
-
 ---------------------------------------------------------------------------------------------------
 
 LOW PRIORITY
+
+    loader when uploading according to the size of the file
+
+    localstorage when password folder.
 
     add the date in the preview, aswell as size
       means adding size and date to media schema in db, aswell as everywhere else
