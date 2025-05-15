@@ -124,7 +124,6 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
       // Start a new fetch request
       const fetchPromise = (async () => {
         try {
-          console.log("thumbnailURL:", item.thumbnailUrl);
           const response = await fetch(item.thumbnailUrl ? item.thumbnailUrl : item.url);
 
           if (!response.ok) {

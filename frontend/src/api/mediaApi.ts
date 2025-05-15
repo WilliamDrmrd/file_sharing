@@ -109,17 +109,43 @@ export async function uploadMedia(
         },
         body: files[i],
       })
-          .then(response => {
-            if (!response.ok) {
-              throw new Error(`Upload failed for ${item.signedUrl}: ${response.status} ${response.statusText}`);
+        .then(async response => {
+          if (!response.ok) {
+            throw new Error(`Upload failed for ${item.signedUrl}: ${response.status} ${response.statusText}`);
+          }
+          console.log(`File ${item.signedUrl} uploaded successfully`);
+          try {
+            const finalResponse = await fetch(
+              `${API_BASE_URL}/folders/${folderId}/media/uploadComplete`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  folderId: folderId,
+                  type: item.type,
+                  uploadedBy: "user",
+                  filename: item.filename,
+                }),
+              },
+            );
+            if (!finalResponse.ok) {
+              const error = await finalResponse.json();
+              throw new Error(`Error: ${error.message || finalResponse.statusText}`);
             }
-            console.log(`File ${item.signedUrl} uploaded successfully`);
-            return response; // Important: Return the response to make the promise resolve
-          })
-          .catch(error => {
-            console.error(`Error uploading ${item.signedUrl}:`, error);
-            throw error; // Re-throw the error to reject Promise.all
-          });
+            const mediaItem: MediaItem = await finalResponse.json();
+            finalResponses.push(mediaItem);
+            console.log("Upload confirmation sent to backend");
+          } catch (error) {
+            console.error("Error uploading file:", error);
+          }
+          return response; // Important: Return the response to make the promise resolve
+        })
+        .catch(error => {
+          console.error(`Error uploading ${item.signedUrl}:`, error);
+          throw error; // Re-throw the error to reject Promise.all
+        });
     });
 
     await Promise.all(uploadPromises);
@@ -129,35 +155,6 @@ export async function uploadMedia(
   } catch (error) {
     console.error("An error occurred during the upload process:", error);
     // Handle the error appropriately - potentially retry, inform the user, etc.
-  }
-
-  for (let i = 0; i < data.length; i++) {
-    try {
-      const finalResponse = await fetch(
-        `${API_BASE_URL}/folders/${folderId}/media/uploadComplete`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            folderId: folderId,
-            type: data[i].type,
-            uploadedBy: "user",
-            filename: data[i].filename,
-          }),
-        },
-      );
-      if (!finalResponse.ok) {
-        const error = await finalResponse.json();
-        throw new Error(`Error: ${error.message || finalResponse.statusText}`);
-      }
-      const mediaItem: MediaItem = await finalResponse.json();
-      finalResponses.push(mediaItem);
-      console.log("Upload confirmation sent to backend");
-    } catch (error) {
-      console.error("Error uploading file:", error);
-    }
   }
   return finalResponses;
 }

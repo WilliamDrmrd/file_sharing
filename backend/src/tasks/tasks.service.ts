@@ -2,6 +2,7 @@ import {Injectable, Logger, OnModuleInit} from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { Storage } from "@google-cloud/storage";
 import {PrismaService} from "../prisma.service";
+import * as path from 'path';
 
 @Injectable()
 export class TasksService implements OnModuleInit {
@@ -89,7 +90,7 @@ export class TasksService implements OnModuleInit {
           );
           const thumbnailUrl = file.thumbnailUrl ? (await this.generateSignedUrlRead(
             process.env.GCLOUD_BUCKET_NAME_THUMBNAIL || 'default-bucket-name',
-            file.thumbnailUrl
+            `thumbnail-${path.parse(file.originalFilename).name}.jpg`
           )) : "";
 
           return this.prisma.media.update({

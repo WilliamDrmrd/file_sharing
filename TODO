@@ -11,6 +11,8 @@ TOP PRIORITY
 
     ask name when delete, just ask if they are sure or not, too.
 
+    stream la visualisation de video
+
 ---------------------------------------------------------------------------------------------------
 
 LOW PRIORITY
@@ -29,6 +31,12 @@ LOW PRIORITY
     maybe add cron or a system to have the zip already made.
         => after 30 mins of nothing uploaded on the folder and different hash.
 
+    cloud run HEIC converter.
+
+    add version number bottom left of the sidebar.
+
+    when you download a video from the mediagrid it can take long time, add circleLoader.
+
 ---------------------------------------------------------------------------------------------------
 
 BUGFIXES
@@ -37,7 +45,14 @@ check if when we create image with same name it works ==> no it doesnt.
     check if when we create image with same name of a deleted one, it works, because then
     if we delete the new one it will try to have the same name as the deleted.
 
+    right now if 2 photos with same name appear in parallel creation of thumbnail
+    it will try to delete twice the same name resulting in an error,
+    though not affecting the process.
+
 if we have two folder with same name we can't have two different zips in the bucket.
+
+the files can load 10 different times if you go on a video and swipe left and right fast before its
+finished it will launch 10 fetches.
 
 
 ---------------------------------------------------------------------------------------------------
@@ -48,6 +63,5 @@ primary key in the link when in a folder ?
 put links of the cloud run services in env
 add database columns for like folderName, etc.
     filtre photo/video/both avec un triple slider, middle/left/right avec middle include les deux
-
 
 

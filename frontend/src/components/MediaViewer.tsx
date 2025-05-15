@@ -18,7 +18,7 @@ import {
   Delete
 } from "@mui/icons-material";
 import { MediaItem } from "../types";
-import {deleteMedia} from "../api/mediaApi";
+import useDownloadProgress from '../hooks/useDownloadProgress';
 
 interface MediaViewerProps {
   items: MediaItem[];
@@ -63,15 +63,6 @@ export default function MediaViewer({
     // Get current item
     const currentItem = items[index];
 
-    // If we already have this item loaded in either blob URL state or from existingBlobUrls, just clear loading
-    if (blobUrls[currentItem.id] || existingBlobUrls[currentItem.id]) {
-      setLoading(false);
-      return;
-    }
-
-    // Set loading state when navigation happens
-    setLoading(true);
-
     // Track in-progress requests to avoid duplicates
     const pendingRequests = new Map<string, Promise<string | null>>();
 
@@ -106,6 +97,53 @@ export default function MediaViewer({
       return fetchPromise;
     };
 
+    const preloadAdjacentItems = async () => {
+      // Preload adjacent items for smooth navigation
+      const adjacentItems: MediaItem[] = [];
+
+      // Next item
+      if (index < items.length - 1) {
+        const nextItem = items[index + 1];
+        if (!blobUrls[nextItem.id] && !existingBlobUrls[nextItem.id])
+          adjacentItems.push(nextItem);
+      }
+
+      // Previous item
+      if (index > 0) {
+        const prevItem = items[index - 1];
+        if (!blobUrls[prevItem.id] && !existingBlobUrls[prevItem.id])
+          adjacentItems.push(prevItem);
+      }
+
+      // Load adjacent items in parallel
+      if (adjacentItems.length > 0) {
+        const adjacentPromises = adjacentItems.map(async (item) => {
+          const itemUrl = await fetchMediaItem(item);
+          if (itemUrl) {
+            setBlobUrls((prev) => ({
+              ...prev,
+              [item.id]: itemUrl,
+            }));
+          }
+        });
+
+        // We don't need to await these - they can load in background
+        Promise.all(adjacentPromises).catch((err) => {
+          console.error("Error preloading adjacent items:", err);
+        });
+      }
+    }
+
+    // If we already have this item loaded in either blob URL state or from existingBlobUrls, just clear loading
+    if (blobUrls[currentItem.id] || existingBlobUrls[currentItem.id]) {
+      setLoading(false);
+      preloadAdjacentItems();
+      return;
+    }
+
+    // Set loading state when navigation happens
+    setLoading(true);
+
     // Load current item first, then adjacent items
     const loadItems = async () => {
       try {
@@ -123,41 +161,6 @@ export default function MediaViewer({
 
         // Clear loading state for current item
         setLoading(false);
-
-        // Preload adjacent items for smooth navigation
-        const adjacentItems: MediaItem[] = [];
-
-        // Next item
-        if (index < items.length - 1) {
-          const nextItem = items[index + 1];
-          if (!blobUrls[nextItem.id] && !existingBlobUrls[nextItem.id])
-            adjacentItems.push(nextItem);
-        }
-
-        // Previous item
-        if (index > 0) {
-          const prevItem = items[index - 1];
-          if (!blobUrls[prevItem.id] && !existingBlobUrls[prevItem.id])
-            adjacentItems.push(prevItem);
-        }
-
-        // Load adjacent items in parallel
-        if (adjacentItems.length > 0) {
-          const adjacentPromises = adjacentItems.map(async (item) => {
-              const itemUrl = await fetchMediaItem(item);
-            if (itemUrl) {
-              setBlobUrls((prev) => ({
-                ...prev,
-                [item.id]: itemUrl,
-              }));
-            }
-          });
-
-          // We don't need to await these - they can load in background
-          Promise.all(adjacentPromises).catch((err) => {
-            console.error("Error preloading adjacent items:", err);
-          });
-        }
       } catch (error) {
         console.error("Error loading media items:", error);
         setLoading(false);
@@ -192,14 +195,6 @@ export default function MediaViewer({
   // Intentionally NOT including blobUrls in deps to avoid update loops
 
   const currentItem = items[index];
-
-  // Function to get the full URL for a media item
-  const getFullUrl = (url: string) => {
-    if (url.startsWith("/")) {
-      return `${process.env.REACT_APP_API_URL || "http://localhost:3000"}${url}`;
-    }
-    return url;
-  };
 
   // Ensure we have a valid blob URL for the current item
   const mediaSrc =
