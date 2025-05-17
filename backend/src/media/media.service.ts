@@ -85,8 +85,6 @@ export class MediaService {
       .bucket(bucketName)
       .file(filename)
       .getSignedUrl(options);
-
-      console.log(`Generated signed URL for ${filename}: ${url}`);
       return url;
     } catch (error) {
       console.error('Error generating signed URL:', error);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -49,6 +49,7 @@ export default function MediaViewer({
   const [blobUrls, setBlobUrls] = useState<{ [key: string]: string }>(
     existingBlobUrls,
   );
+  const pendingRequestsRef = useRef(new Map<string, Promise<string | null>>());
 
   // Reset the index when items or currentIndex changes
   useEffect(() => {
@@ -63,14 +64,12 @@ export default function MediaViewer({
     // Get current item
     const currentItem = items[index];
 
-    // Track in-progress requests to avoid duplicates
-    const pendingRequests = new Map<string, Promise<string | null>>();
-
     // Function to fetch a media item
     const fetchMediaItem = async (item: MediaItem): Promise<string | null> => {
       // Avoid duplicate requests
-      if (pendingRequests.has(item.id)) {
-        return pendingRequests.get(item.id) as Promise<string | null>;
+      console.log(pendingRequestsRef.current);
+      if (pendingRequestsRef.current.has(item.id)) {
+        return pendingRequestsRef.current.get(item.id) as Promise<string | null>;
       }
 
       // Create and store the promise
@@ -89,11 +88,11 @@ export default function MediaViewer({
           console.error(`Error fetching item (${item.id}):`, error);
           return null;
         } finally {
-          pendingRequests.delete(item.id);
+          pendingRequestsRef.current.delete(item.id);
         }
       })();
 
-      pendingRequests.set(item.id, fetchPromise);
+      pendingRequestsRef.current.set(item.id, fetchPromise);
       return fetchPromise;
     };
 
@@ -258,7 +257,7 @@ export default function MediaViewer({
 
     try {
       setDownloading(true);
-      handleDownload(currentItem);
+      await handleDownload(currentItem);
     } catch (error) {
       console.error("Error downloading file:", error);
     } finally {
