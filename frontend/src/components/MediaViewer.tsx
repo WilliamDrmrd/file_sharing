@@ -18,7 +18,6 @@ import {
   Delete
 } from "@mui/icons-material";
 import { MediaItem } from "../types";
-import useDownloadProgress from '../hooks/useDownloadProgress';
 
 interface MediaViewerProps {
   items: MediaItem[];
@@ -46,6 +45,10 @@ export default function MediaViewer({
   const [fullscreen, setFullscreen] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [currentDownloadProgress, setCurrentDownloadProgress] = useState<number>(0);
+  const [currentDownloadTotal, setCurrentDownloadTotal] = useState<number>(0);
+  const [currentDownloadLoaded, setCurrentDownloadLoaded] = useState<number>(0);
+  const [isDownloading, setIsDownloading] = useState<boolean>(false);
   const [blobUrls, setBlobUrls] = useState<{ [key: string]: string }>(
     existingBlobUrls,
   );
@@ -67,7 +70,6 @@ export default function MediaViewer({
     // Function to fetch a media item
     const fetchMediaItem = async (item: MediaItem): Promise<string | null> => {
       // Avoid duplicate requests
-      console.log(pendingRequestsRef.current);
       if (pendingRequestsRef.current.has(item.id)) {
         return pendingRequestsRef.current.get(item.id) as Promise<string | null>;
       }
@@ -75,19 +77,71 @@ export default function MediaViewer({
       // Create and store the promise
       const fetchPromise = (async () => {
         try {
+          // Reset download progress
+          setCurrentDownloadProgress(0);
+          setCurrentDownloadLoaded(0);
+          setCurrentDownloadTotal(0);
+          setIsDownloading(true);
+
+          // Use the fetch API with a reader to track progress
           const response = await fetch(item.url);
 
           if (!response.ok) {
             throw new Error(`Failed to fetch media: ${response.statusText}`);
           }
 
-          const blob = await response.blob();
+          // Get total size from content-length header
+          const contentLength = response.headers.get('content-length');
+          const totalSize = contentLength ? parseInt(contentLength, 10) : 0;
+          setCurrentDownloadTotal(totalSize);
+
+          // Create a reader from the response body
+          const reader = response.body?.getReader();
+          if (!reader) {
+            throw new Error('ReadableStream not supported');
+          }
+
+          // Read the data chunks
+          const chunks: Uint8Array[] = [];
+          let receivedLength = 0;
+
+          while (true) {
+            const { done, value } = await reader.read();
+
+            if (done) {
+              break;
+            }
+
+            chunks.push(value);
+            receivedLength += value.length;
+
+            // Update progress
+            setCurrentDownloadLoaded(receivedLength);
+            if (totalSize) {
+              setCurrentDownloadProgress(Math.round((receivedLength / totalSize) * 100));
+            }
+          }
+
+          // Concatenate chunks into a single Uint8Array
+          const chunksAll = new Uint8Array(receivedLength);
+          let position = 0;
+          for (const chunk of chunks) {
+            chunksAll.set(chunk, position);
+            position += chunk.length;
+          }
+
+          // Create a blob and get URL
+          const mimeType = item.type === 'photo' ? 'image/jpeg' : 'video/mp4';
+          const blob = new Blob([chunksAll], { type: mimeType });
           const blobUrl = URL.createObjectURL(blob);
+
+          setCurrentDownloadProgress(100);
           return blobUrl;
         } catch (error) {
           console.error(`Error fetching item (${item.id}):`, error);
           return null;
         } finally {
+          setIsDownloading(false);
           pendingRequestsRef.current.delete(item.id);
         }
       })();
@@ -114,21 +168,29 @@ export default function MediaViewer({
           adjacentItems.push(prevItem);
       }
 
-      // Load adjacent items in parallel
+      // Load adjacent items - but one by one to avoid conflicts with the progress tracking
+      // This is a compromise - we won't load in parallel to keep the progress indicator accurate
       if (adjacentItems.length > 0) {
-        const adjacentPromises = adjacentItems.map(async (item) => {
-          const itemUrl = await fetchMediaItem(item);
-          if (itemUrl) {
-            setBlobUrls((prev) => ({
-              ...prev,
-              [item.id]: itemUrl,
-            }));
-          }
-        });
-
         // We don't need to await these - they can load in background
-        Promise.all(adjacentPromises).catch((err) => {
-          console.error("Error preloading adjacent items:", err);
+        (async () => {
+          for (const item of adjacentItems) {
+            try {
+              // Only try to load if we're not already loading something else
+              if (!isDownloading) {
+                const itemUrl = await fetchMediaItem(item);
+                if (itemUrl) {
+                  setBlobUrls((prev) => ({
+                    ...prev,
+                    [item.id]: itemUrl,
+                  }));
+                }
+              }
+            } catch (err) {
+              console.error(`Error preloading item ${item.id}:`, err);
+            }
+          }
+        })().catch((err) => {
+          console.error("Error in preload process:", err);
         });
       }
     }
@@ -332,15 +394,36 @@ export default function MediaViewer({
           }}
         >
           {loading && (
-            <CircularProgress
+            <Box
               sx={{
                 position: "absolute",
                 top: "50%",
                 left: "50%",
                 transform: "translate(-50%, -50%)",
                 zIndex: 5,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 1,
+                width: "80%",
+                maxWidth: "400px"
               }}
-            />
+            >
+              {isDownloading && currentDownloadTotal > 0 ? (
+                <>
+                  <CircularProgress
+                    variant="determinate"
+                    value={currentDownloadProgress}
+                    size={60}
+                  />
+                  <Typography variant="body2" color="white">
+                    {currentDownloadProgress}% ({(currentDownloadLoaded / 1024 / 1024).toFixed(1)} MB / {(currentDownloadTotal / 1024 / 1024).toFixed(1)} MB)
+                  </Typography>
+                </>
+              ) : (
+                <CircularProgress />
+              )}
+            </Box>
           )}
 
           {/* Only show media once blob URL is ready */}
