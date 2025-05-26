@@ -61,6 +61,7 @@ export async function fetchFolderContent(
 export async function uploadMedia(
   folderId: string,
   files: FileList,
+  onProgress?: (progress: number) => void
 ): Promise<MediaItem[]> {
   let requestArray: {
     filename: string;
@@ -101,6 +102,9 @@ export async function uploadMedia(
   let finalResponses: MediaItem[] = [];
 
   try {
+    const totalFiles = data.length;
+    let completedFiles = 0;
+    
     const uploadPromises = data.map((item, i) => {
       return fetch(item.signedUrl, {
         method: "PUT",
@@ -139,6 +143,10 @@ export async function uploadMedia(
             console.log("Upload confirmation sent to backend");
           } catch (error) {
             console.error("Error uploading file:", error);
+          }
+          completedFiles++;
+          if (onProgress) {
+            onProgress((completedFiles / totalFiles) * 100);
           }
           return response; // Important: Return the response to make the promise resolve
         })

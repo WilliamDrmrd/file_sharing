@@ -43,6 +43,8 @@ export default function Folder() {
   const [filteredMedia, setFilteredMedia] = useState<MediaItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [folder, setFolder] = useState<{
     id: string;
@@ -113,8 +115,11 @@ export default function Folder() {
     if (!e.target.files) return;
 
     try {
-      setLoading(true);
-      const newMediaItems = await uploadMedia(id!, e.target.files);
+      setIsUploading(true);
+      setUploadProgress(0);
+      const newMediaItems = await uploadMedia(id!, e.target.files, (progress) => {
+        setUploadProgress(progress);
+      });
       // Handle array of media items returned from backend
       setMedia((prev) => [
         ...(Array.isArray(newMediaItems) ? newMediaItems : [newMediaItems]),
@@ -124,7 +129,8 @@ export default function Folder() {
       console.error("Error uploading media:", error);
       alert("Failed to upload media. Please try again.");
     } finally {
-      setLoading(false);
+      setIsUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -146,9 +152,12 @@ export default function Folder() {
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       // Show loading state
-      setLoading(true);
+      setIsUploading(true);
+      setUploadProgress(0);
 
-      uploadMedia(id!, e.dataTransfer.files)
+      uploadMedia(id!, e.dataTransfer.files, (progress) => {
+        setUploadProgress(progress);
+      })
         .then((newMediaItems) => {
           // Handle array of media items returned from backend
           setMedia((prev) => [
@@ -161,7 +170,8 @@ export default function Folder() {
           alert("Failed to upload media. Please try again.");
         })
         .finally(() => {
-          setLoading(false);
+          setIsUploading(false);
+          setUploadProgress(0);
         });
     }
   };
@@ -323,21 +333,31 @@ export default function Folder() {
           <Button
             variant="contained"
             component="label"
-            startIcon={<CloudUpload />}
+            startIcon={isUploading ? null : <CloudUpload />}
+            disabled={isUploading}
             sx={{
               borderRadius: 2,
               px: 3,
               py: 1.2,
               boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.4)}`,
+              position: 'relative',
+              overflow: 'hidden'
             }}
           >
-            Upload Media
+            {isUploading ? (
+              <>
+                <Box sx={{ width: `${uploadProgress}%`, height: '100%', bgcolor: 'rgba(255,255,255,0.2)', 
+                    position: 'absolute', left: 0, top: 0, transition: 'width 0.3s' }} />
+                {Math.round(uploadProgress)}%
+              </>
+            ) : 'Upload Media'}
             <input
               hidden
               multiple
               type="file"
               accept="image/*,video/*"
               onChange={onUpload}
+              disabled={isUploading}
             />
           </Button>
         </Box>
@@ -385,15 +405,27 @@ export default function Folder() {
           <Button
             variant="contained"
             component="label"
-            startIcon={<CloudUpload />}
+            startIcon={isUploading ? null : <CloudUpload />}
+            disabled={isUploading}
+            sx={{
+              position: 'relative',
+              overflow: 'hidden'
+            }}
           >
-            Select Files
+            {isUploading ? (
+              <>
+                <Box sx={{ width: `${uploadProgress}%`, height: '100%', bgcolor: 'rgba(255,255,255,0.2)', 
+                    position: 'absolute', left: 0, top: 0, transition: 'width 0.3s' }} />
+                {Math.round(uploadProgress)}%
+              </>
+            ) : 'Select Files'}
             <input
               hidden
               multiple
               type="file"
               accept="image/*,video/*"
               onChange={onUpload}
+              disabled={isUploading}
             />
           </Button>
         </Paper>
