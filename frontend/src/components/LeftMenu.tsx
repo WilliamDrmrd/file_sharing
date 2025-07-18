@@ -25,7 +25,6 @@ import { Link, useLocation } from "react-router-dom";
 const menuItems = [
   { text: "Collections", icon: <Folder />, to: "/folders" },
   { text: "Create Collection", icon: <Add />, to: "/create" },
-  { text: "Organize", icon: <AdminPanelSettings />, to: "/admin" },
 ];
 
 interface LeftMenuProps {

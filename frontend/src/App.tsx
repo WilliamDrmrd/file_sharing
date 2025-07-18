@@ -21,7 +21,6 @@ import LeftMenu from "./components/LeftMenu";
 import Folders from "./pages/Folders";
 import Folder from "./pages/Folder";
 import Create from "./pages/Create";
-import Admin from "./pages/Admin";
 import Documentation from "./pages/Documentation";
 
 export default function App() {
@@ -92,7 +91,6 @@ export default function App() {
                 <Route path="/folders" element={<Folders />} />
                 <Route path="/folders/:id" element={<Folder />} />
                 <Route path="/create" element={<Create />} />
-                <Route path="/admin" element={<Admin />} />
                 <Route path="/documentation" element={<Documentation />} />
               </Routes>
             </Box>

@@ -32,6 +32,8 @@ export class MediaGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // Listen for file subscriptions
     client.on('subscribeToFile', async (fileName: string) => {
       //TODO change this its not findfirst
+      // actually should be the only one with this name
+      // so ok.
       const media = await this.prisma.media.findFirst({
         where: {
           originalFilename: fileName,
