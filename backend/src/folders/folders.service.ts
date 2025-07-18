@@ -39,10 +39,9 @@ export class FoldersService {
     });
 
     this.logger.log(`Found ${folders.length} folders`);
-    return folders.map((f) => ({
+    return folders.map(({media, password, ...f}) => ({
       ...f,
-      password: undefined, // don't send passwords
-      mediaCount: f.media.length,
+      mediaCount: media.length,
     }));
   }
 
