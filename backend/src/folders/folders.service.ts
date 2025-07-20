@@ -29,17 +29,23 @@ export class FoldersService {
         deleted: false,
       },
       orderBy: {createdAt: 'desc'},
-      include: {
+      select: {
+        id: true,
+        name: true,
+        createdBy: true,
         media: {
           where: {
             deleted: false
-          }
+          },
+          select: {
+            id: true,
+          },
         },
-      },
+      }
     });
 
     this.logger.log(`Found ${folders.length} folders`);
-    return folders.map(({media, password, ...f}) => ({
+    return folders.map(({media, ...f}) => ({
       ...f,
       mediaCount: media.length,
     }));
