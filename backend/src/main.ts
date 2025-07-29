@@ -15,6 +15,7 @@ async function bootstrap() {
     origin: [
       'http://localhost:3001',
       'https://snapshare-ku.vercel.app',
+      'https://snapshare.ramizz.xyz',
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: ['Content-Type', 'Accept', 'ngrok-skip-browser-warning', 'x-admin-token'],
