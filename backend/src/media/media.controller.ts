@@ -138,6 +138,25 @@ export class MediaController {
     }
   }
 
+  // Placeholder route to receive metadata (size, date, uploader) in the future
+  @Post('metadata')
+  async receiveMetadata(
+    @Param('folderId') folderId: string,
+    @Body()
+    body: {
+      filename: string;
+      sizeBytes?: number;
+      createdAtIso?: string;
+      uploadedBy?: string;
+    },
+  ) {
+    // for now we just log and return synchronously
+    this.logger.log(
+      `Received metadata for folder ${folderId}: ${JSON.stringify(body)}`,
+    );
+    return Promise.resolve({ ok: true });
+  }
+
   @Delete(':mediaId')
   async deleteMedia(
     @Param('mediaId') mediaId: string,

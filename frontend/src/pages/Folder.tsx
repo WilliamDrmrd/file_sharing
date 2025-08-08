@@ -16,9 +16,7 @@ import {
   useTheme,
   alpha,
   Chip,
-  Divider,
   IconButton,
-  Tooltip,
   TextField,
   InputAdornment,
   Dialog,
@@ -67,7 +65,7 @@ export default function Folder() {
         setFolder(folderData);
 
         // If folder has no password or password is already verified, fetch content
-        const stored = sessionStorage.getItem(`folder:${id}:password`);
+          const stored = localStorage.getItem(`folder:${id}:password`);
         if (!folderData.password || passwordVerified || stored) {
           fetchFolderContent(id!)
             .then((items) => {
@@ -189,8 +187,8 @@ export default function Folder() {
 
       if (isVerified) {
         setPasswordVerified(true);
-        // persist for refresh/navigation
-        sessionStorage.setItem(`folder:${id}:password`, passwordInput);
+        // persist for refresh/navigation (longer term)
+        localStorage.setItem(`folder:${id}:password`, passwordInput);
         // Fetch folder content after successful verification
         fetchFolderContent(id)
           .then((items) => {

@@ -1,24 +1,11 @@
-import {
-  alpha,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  CardMedia,
-  Chip,
-  IconButton,
-  Skeleton,
-  Typography,
-  useTheme,
-  CircularProgress,
-} from "@mui/material";
+import { alpha, Box, Button, Card, CardContent, CardMedia, Chip, IconButton, Typography, useTheme, CircularProgress, } from "@mui/material";
 import {Download, FileDownload, Image, Videocam, Visibility,} from "@mui/icons-material";
 import {MediaItem} from "../types";
-import React, {useEffect, useState, useRef, useCallback} from "react";
+import React, {useEffect, useRef, useState} from "react";
 import {deleteMedia} from "../api/mediaApi";
 import MediaViewer from "./MediaViewer";
-import { io, Socket } from 'socket.io-client';
 import { getZip } from "../api/mediaApi";
+import { io, Socket } from "socket.io-client";
 
 interface Props {
   items: MediaItem[];
@@ -32,179 +19,88 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [loadingItems, setLoadingItems] = useState<{ [key: string]: boolean }>({});
-  const [thumbnailBlobUrls, setThumbnailBlobUrls] = useState<{ [key: string]: string }>({});
   const [blobUrls, setBlobUrls] = useState<{ [key: string]: string }>({});
   const [downloadingZip, setDownloadingZip] = useState(false);
+  const [downloadingById, setDownloadingById] = useState<{ [key: string]: boolean }>({});
+  const [downloadProgressById, setDownloadProgressById] = useState<{ [key: string]: number }>({});
+  const [failedThumbById, setFailedThumbById] = useState<{ [key: string]: boolean }>({});
+  // Track last known thumbnail URL per item to decide when to show loading spinner
+  const prevThumbnailByIdRef = useRef<{ [key: string]: string | undefined }>({});
+  // WebSocket: subscribe to thumbnail updates for videos without thumbnails
   const socketRef = useRef<Socket | null>(null);
+  const subscribedFilesRef = useRef<Set<string>>(new Set());
 
-  // Initialize WebSocket connection
-  const initializeSocket = useCallback(() => {
-    // Close existing socket if any
-    if (socketRef.current) {
-      socketRef.current.disconnect();
-    }
-
-    // Connect to WebSocket server
-    socketRef.current = io(process.env.REACT_APP_API_URL || "http://localhost:3000");
-
-    // Set up event listeners
-    socketRef.current.on('connect', () => {
-      console.log('Connected to WebSocket server');
-    });
-
-    socketRef.current.on('disconnect', () => {
-      console.log('Disconnected from WebSocket server');
-    });
-
-    return socketRef.current;
+  useEffect(() => {
+    const socket = io(process.env.REACT_APP_API_URL || "http://localhost:3000");
+    socketRef.current = socket;
+    const filesSnapshot: string[] = Array.from(subscribedFilesRef.current);
+    return () => {
+      // Remove specific listeners we attached
+      filesSnapshot.forEach((fileName) => {
+        socket.off(`fileProcessed_${fileName}`);
+      });
+      socket.disconnect();
+      socketRef.current = null;
+    };
   }, []);
 
-    const subscribeToFileUpdates = useCallback((fileName: string | undefined): Promise<string> => {
-    if (!fileName) {
-      return Promise.reject(new Error("File name is required"));
-    }
-    return new Promise((resolve, reject) => {
-      const socket = socketRef.current || initializeSocket();
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket) return;
 
-      // Subscribe to this specific file
-      socket.emit('subscribeToFile', fileName);
-
-      // Listen for file processed event
-      socket.on('fileProcessed_' + fileName, (data: { fileName: string, status: string, thumbnailUrl: string }) => {
-        if (data.fileName === fileName && data.status === 'complete') {
-          resolve(data.thumbnailUrl);
+    currentItems.forEach((item) => {
+      if (!item.thumbnailUrl && item.originalFilename) {
+        const fileName = item.originalFilename;
+        if (!subscribedFilesRef.current.has(fileName)) {
+          subscribedFilesRef.current.add(fileName);
+          socket.emit("subscribeToFile", fileName);
+          const handler = (data: { fileName: string; status: string; thumbnailUrl: string }) => {
+            if (data.status === "complete" && data.fileName === fileName) {
+              // Update item to include thumbnailUrl
+              setCurrentItems((prev) => prev.map((it) => it.id === item.id ? { ...it, thumbnailUrl: data.thumbnailUrl } : it));
+              // show overlay spinner until <img> fires onLoad
+              setLoadingItems((prev) => ({ ...prev, [item.id]: true }));
+              setFailedThumbById((prev) => ({ ...prev, [item.id]: false }));
+              // Once processed, no need to keep listening for this file
+              socket.off(`fileProcessed_${fileName}`, handler);
+            }
+          };
+          socket.on(`fileProcessed_${fileName}`, handler);
         }
-      });
-
-      // Set up error and timeout handling
-      socket.on('error', (error: any) => {
-        reject(new Error(`WebSocket error: ${error}`));
-      });
-
-      // Optional: Set up a timeout
-      const timeout = setTimeout(() => {
-        reject(new Error('WebSocket timeout waiting for file processing'));
-      }, 5 * 60 * 1000); // 5 minute timeout
-
-      // Clean up function to remove listeners
-      return () => {
-        socket.off('fileProcessed_' + fileName);
-        socket.off('error');
-        clearTimeout(timeout);
-      };
+      }
     });
-  }, [initializeSocket]);
+  }, [currentItems]);
+
+  // WebSocket subscribe function intentionally omitted (unused for now)
 
   useEffect(() => {
     setCurrentItems(items);
-  }, [items]);
-
-  // Single effect to manage media loading
-  useEffect(() => {
-    if (currentItems.length === 0) return;
-
-    // Set all items to loading state initially
-    const newLoadingItems = currentItems.reduce(
-      (acc, item) => {
-        acc[item.id] = true;
-        return acc;
-      },
-      {} as { [key: string]: boolean },
-    );
-    setLoadingItems(newLoadingItems);
-
-    // We'll keep track of which requests are in progress to avoid duplicates
-    const pendingRequests = new Map<string, Promise<string | null>>();
-
-    const fetchItem = async (item: MediaItem): Promise<string | null> => {
-      // Check if this item is already being fetched
-      if (pendingRequests.has(item.id)) {
-        return pendingRequests.get(item.id) as Promise<string | null>;
-      }
-      // Start a new fetch request
-      const fetchPromise = (async () => {
-        try {
-          const response = await fetch(item.thumbnailUrl ? item.thumbnailUrl : item.url);
-
-          if (!response.ok) {
-            throw new Error(`HTTP error ${response.status}`);
-          }
-
-          // Get the media as a blob
-          const blob = await response.blob();
-          // Create a blob URL that can be used directly by img/video tags
-          return URL.createObjectURL(blob);
-        } catch (error) {
-          console.error(`Error loading media ${item.id}:`, error);
-          return null;
-        } finally {
-          // Remove from pending requests when done
-          pendingRequests.delete(item.id);
-        }
-      })();
-
-      // Store the promise so we don't start duplicate requests
-      pendingRequests.set(item.id, fetchPromise);
-      return fetchPromise;
-    };
-
-
-// Process items in batches to avoid overwhelming the browser
-    const processInBatches = async () => {
-      const batchSize = 12; // Process 12 items per batch
-      const newBlobUrls: { [key: string]: string } = { ...thumbnailBlobUrls };
-
-      // Process in batches
-      for (let i = 0; i < currentItems.length; i += batchSize) {
-        const batchItems = currentItems.slice(i, i + batchSize);
-
-        console.log(`Processing batch ${Math.floor(i/batchSize) + 1} with ${batchItems.length} items`);
-
-        // Process this batch in parallel with Promise.all
-        const results = await Promise.all(
-          batchItems.map(async (item) => {
-            // Skip if we already have this URL
-            if (thumbnailBlobUrls[item.id]) {
-              setLoadingItems((prev) => ({ ...prev, [item.id]: false }));
-              return [item.id, thumbnailBlobUrls[item.id]];
-            }
-
-            const blobUrl = await fetchItem(item);
-
-            // Update loading state regardless of success/failure
-            setLoadingItems((prev) => ({ ...prev, [item.id]: false }));
-
-            return [item.id, blobUrl];
-          })
-        );
-
-        // Update blob URLs with results from this batch
-        results.forEach(([id, url]) => {
-          if (id && url) newBlobUrls[id as string] = url as string;
-        });
-
-        // Update our state after each batch
-        setThumbnailBlobUrls({ ...newBlobUrls });
-
-        // Optional: Add a small delay between batches to prevent UI freezing
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
-    };
-
-    // Start processing
-    processInBatches();
-
-    // Clean up when unmounting or when items change
-    return () => {
-      // Only revoke URLs that are no longer needed
-      const currentIds = new Set(currentItems.map((item) => item.id));
-      Object.entries(thumbnailBlobUrls).forEach(([id, url]) => {
-        if (!currentIds.has(id)) {
-          URL.revokeObjectURL(url);
+    // Only set loading=true for items whose thumbnailUrl just appeared/changed
+    setLoadingItems((prev) => {
+      const next: { [key: string]: boolean } = { ...prev };
+      const seenIds = new Set<string>();
+      items.forEach((it) => {
+        seenIds.add(it.id);
+        const prevThumb = prevThumbnailByIdRef.current[it.id];
+        if (it.thumbnailUrl && it.thumbnailUrl !== prevThumb) {
+          next[it.id] = true;
         }
       });
-    };
-  }, [currentItems]);
+      // Cleanup loading flags for items no longer present
+      Object.keys(next).forEach((id) => {
+        if (!seenIds.has(id)) delete next[id];
+      });
+      // Update ref snapshot of thumbnails
+      const snapshot: { [key: string]: string | undefined } = {};
+      items.forEach((it) => {
+        snapshot[it.id] = it.thumbnailUrl;
+      });
+      prevThumbnailByIdRef.current = snapshot;
+      return next;
+    });
+  }, [items]);
+
+  // Removed background blob fetching to reduce CPU/memory. Images use direct URLs with browser caching.
 
   const handleDelete = async (mediaId: string) => {
     try {
@@ -293,15 +189,52 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
   }
 
   async function handleDownload (item: MediaItem) {
-    // Check if we already have the blob URL
-    if (blobUrls[item.id]) {
-      await downloadBlob(blobUrls[item.id], item.originalFilename);
-    } else {
-      // Fetch the blob URL first
-      const blobUrl = await fetch(item.url).then((res) =>
-        res.blob(),
-      );
-      await downloadBlob(blobUrl, item.originalFilename);
+    try {
+      setDownloadingById((prev) => ({ ...prev, [item.id]: true }));
+      setDownloadProgressById((prev) => ({ ...prev, [item.id]: 0 }));
+
+      // If we already cached, just download
+      if (blobUrls[item.id]) {
+        await downloadBlob(blobUrls[item.id], item.originalFilename);
+        return;
+      }
+
+      // Stream download with progress
+      const response = await fetch(item.url);
+      if (!response.ok || !response.body) {
+        throw new Error('Failed to fetch file');
+      }
+      const contentLengthHeader = response.headers.get('content-length');
+      const total = contentLengthHeader ? parseInt(contentLengthHeader, 10) : 0;
+      const reader = response.body.getReader();
+      const chunks: Uint8Array[] = [];
+      let bytesReceived = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) {
+          chunks.push(value);
+          bytesReceived += value.length;
+          if (total) {
+            const progress = (bytesReceived / total) * 100;
+            setDownloadProgressById((prev) => ({ ...prev, [item.id]: progress }));
+          }
+        }
+      }
+      const all = new Uint8Array(bytesReceived);
+      let position = 0;
+      for (const chunk of chunks) {
+        all.set(chunk, position);
+        position += chunk.length;
+      }
+      const mimeType = item.type === 'photo' ? 'image/jpeg' : 'video/mp4';
+      const blob = new Blob([all], { type: mimeType });
+      await downloadBlob(blob, item.originalFilename);
+    } catch (err) {
+      console.error('Error downloading file:', err);
+    } finally {
+      setDownloadingById((prev) => ({ ...prev, [item.id]: false }));
+      setDownloadProgressById((prev) => ({ ...prev, [item.id]: 0 }));
     }
   }
 
@@ -374,58 +307,105 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
 
                   onClick={() => openViewer(index)}
                 >
-                  {
-                    loadingItems[item.id] ? (
-                      <Box sx={{position: 'relative', height: { xs: 140, sm: 160, md: 200 },}}>
-                        <CircularProgress size={24} color="inherit"
+                  <Box sx={{ position: 'relative', height: { xs: 140, sm: 160, md: 200 },}}>
+                    {isImage ? (
+                      item.thumbnailUrl && !failedThumbById[item.id] ? (
+                        <CardMedia
+                          component="img"
+                          src={item.thumbnailUrl}
+                          loading="lazy"
+                          sx={{
+                            height: { xs: 140, sm: 160, md: 200 },
+                            objectFit: 'cover',
+                            transition: 'opacity 0.3s ease',
+                          }}
+                          onLoad={() => handleImageLoad(item.id)}
+                          onError={() => {
+                            setFailedThumbById((prev) => ({ ...prev, [item.id]: true }));
+                            setLoadingItems((prev) => ({ ...prev, [item.id]: false }));
+                          }}
+                        />
+                      ) : (
+                        <Box
+                          sx={{
+                            height: { xs: 140, sm: 160, md: 200 },
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            bgcolor: alpha(theme.palette.background.paper, 0.3),
+                          }}
+                        >
+                          <Image sx={{ color: alpha('#fff', 0.8) }} />
+                        </Box>
+                      )
+                    ) : (
+                      item.thumbnailUrl && !failedThumbById[item.id] ? (
+                        <CardMedia
+                          component="img"
+                          src={item.thumbnailUrl}
+                          loading="lazy"
+                          sx={{
+                            height: { xs: 140, sm: 160, md: 200 },
+                            objectFit: 'cover',
+                            transition: 'opacity 0.3s ease',
+                          }}
+                          onLoad={() => handleImageLoad(item.id)}
+                          onError={() => {
+                            setFailedThumbById((prev) => ({ ...prev, [item.id]: true }));
+                            setLoadingItems((prev) => ({ ...prev, [item.id]: false }));
+                          }}
+                        />
+                      ) : (
+                        <Box
+                          sx={{
+                            height: { xs: 140, sm: 160, md: 200 },
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            bgcolor: alpha(theme.palette.background.paper, 0.3),
+                          }}
+                        >
+                          <Videocam sx={{ color: alpha('#fff', 0.8) }} />
+                        </Box>
+                      )
+                    )}
+                    {loadingItems[item.id] && item.thumbnailUrl && (
+                      <Box
                         sx={{
                           position: 'absolute',
-                          top: 'calc(50% - 12px)',
-                          left: 'calc(50% - 12px)',
-                          transform: 'translate(-50%, -50%)',
-                          zIndex: 1,
-                        }}/>
+                          inset: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: 'rgba(0,0,0,0.15)',
+                          zIndex: 2,
+                        }}
+                      >
+                        <CircularProgress size={24} />
                       </Box>
-                    ) : (
-                      <Box sx={{ position: 'relative', height: { xs: 140, sm: 160, md: 200 },}}>
-                        {(isImage ? (
-                          <CardMedia
-                            component="img"
-                            src={item.thumbnailUrl ? thumbnailBlobUrls[item.id] : item.url}
-                            sx={{
-                              height: { xs: 140, sm: 160, md: 200 },
-                              objectFit: 'cover',
-                              transition: 'opacity 0.3s ease',
-                            }}
-                            onLoadedMetadata={() => handleImageLoad(item.id)}
-                          />
-                        ) : ( item.thumbnailUrl ? (
-                          <CardMedia
-                            component="img"
-                            src={item.thumbnailUrl}
-                            sx={{
-                              height: { xs: 140, sm: 160, md: 200 },
-                              objectFit: "cover",
-                              transition: "transform 0.3s ease",
-                            }}
-                            onLoadedMetadata={() => handleImageLoad(item.id)}
-                          />
-                        ) : (
-                          <CardMedia
-                            component="video"
-                            src={item.url}
-                            sx={{
-                              height: { xs: 140, sm: 160, md: 200 },
-                              objectFit: "cover",
-                              transition: "transform 0.3s ease",
-                            }}
-                            onLoadedMetadata={() => handleImageLoad(item.id)}
-                          />
-                          )
-                        ))}
+                    )}
+                    {/* Download progress overlay */}
+                    {downloadingById[item.id] && (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          inset: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: 'rgba(0,0,0,0.35)',
+                          zIndex: 3,
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                          <CircularProgress variant={Number.isFinite(downloadProgressById[item.id]) ? 'determinate' : 'indeterminate'} value={downloadProgressById[item.id] || 0} />
+                          {Number.isFinite(downloadProgressById[item.id]) && (
+                            <Typography variant="caption" color="white">{Math.round(downloadProgressById[item.id])}%</Typography>
+                          )}
+                        </Box>
                       </Box>
-                    )
-                  }
+                    )}
+                  </Box>
 
                   {/* Type indicator */}
                   <Box
@@ -551,10 +531,14 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
                         },
                       }}
                     >
-                      <Download
-                        fontSize="small"
-                        sx={{ color: theme.palette.primary.main }}
-                      />
+                      {downloadingById[item.id] ? (
+                        <CircularProgress size={18} />
+                      ) : (
+                        <Download
+                          fontSize="small"
+                          sx={{ color: theme.palette.primary.main }}
+                        />
+                      )}
                     </IconButton>
                   </Box>
                 </CardContent>

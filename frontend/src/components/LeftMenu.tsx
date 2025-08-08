@@ -1,26 +1,7 @@
-import {
-  Drawer,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Box,
-  Typography,
-  Divider,
-  useTheme,
-  Avatar,
-  useMediaQuery,
-  alpha,
-  Chip,
-} from "@mui/material";
-import {
-  Folder,
-  Add,
-  AdminPanelSettings,
-  PhotoLibrary,
-  KeyboardArrowRight,
-} from "@mui/icons-material";
+import { Drawer, List, ListItemButton, ListItemIcon, ListItemText, Box, Typography, Divider, useTheme, Avatar, useMediaQuery, alpha, } from "@mui/material";
+import { Folder, Add, PhotoLibrary, KeyboardArrowRight } from "@mui/icons-material";
 import { Link, useLocation } from "react-router-dom";
+import { APP_VERSION } from "../version";
 
 const menuItems = [
   { text: "Collections", icon: <Folder />, to: "/folders" },
@@ -165,7 +146,12 @@ export default function LeftMenu({
         </List>
       </Box>
 
-      <Box sx={{ mt: "auto", p: 3 }} />
+      <Box sx={{ mt: "auto", p: 3 }}>
+        <Divider sx={{ mb: 1, opacity: 0.1 }} />
+        <Typography variant="caption" color="text.secondary" sx={{ opacity: 0.7 }}>
+          v{APP_VERSION}
+        </Typography>
+      </Box>
     </>
   );
 
