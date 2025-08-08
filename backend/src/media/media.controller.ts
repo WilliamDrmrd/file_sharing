@@ -139,8 +139,13 @@ export class MediaController {
   }
 
   @Delete(':mediaId')
-  async deleteMedia(@Param('mediaId') mediaId: string) {
-    this.logger.log(`Deleting media: ${mediaId}`);
+  async deleteMedia(
+    @Param('mediaId') mediaId: string,
+    @Body('deletedBy') deletedBy?: string,
+  ) {
+    this.logger.log(
+      `Deleting media: ${mediaId}${deletedBy ? ` by ${deletedBy}` : ''}`,
+    );
     return this.mediaService.remove(mediaId);
   }
 }
@@ -171,8 +176,13 @@ export class SingleMediaController {
   }
 
   @Delete(':mediaId')
-  async deleteOne(@Param('mediaId') mediaId: string) {
-    this.logger.log(`Deleting single media: ${mediaId}`);
+  async deleteOne(
+    @Param('mediaId') mediaId: string,
+    @Body('deletedBy') deletedBy?: string,
+  ) {
+    this.logger.log(
+      `Deleting single media: ${mediaId}${deletedBy ? ` by ${deletedBy}` : ''}`,
+    );
     return this.mediaService.remove(mediaId);
   }
 }

@@ -41,7 +41,13 @@ export class FoldersController {
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string) {
+  async remove(
+    @Param('id') id: string,
+    @Body('deletedBy') deletedBy?: string,
+  ) {
+    this.logger.log(
+      `Deleting folder: ${id}${deletedBy ? ` by ${deletedBy}` : ''}`,
+    );
     return this.foldersService.remove(id);
   }
 

@@ -70,6 +70,10 @@ export default function MediaViewer({
       // Create and store the promise
       const fetchPromise = (async () => {
         try {
+          // For videos, stream directly from the signed URL to avoid loading the entire file in memory
+          if (item.type === 'video') {
+            return item.url;
+          }
           // Reset download progress
           setCurrentDownloadProgress(0);
           setCurrentDownloadLoaded(0);
@@ -124,7 +128,7 @@ export default function MediaViewer({
           }
 
           // Create a blob and get URL
-          const mimeType = item.type === 'photo' ? 'image/jpeg' : 'video/mp4';
+          const mimeType = 'image/jpeg';
           const blob = new Blob([chunksAll], { type: mimeType });
           try {
             if (item.type === 'photo')

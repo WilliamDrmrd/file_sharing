@@ -208,7 +208,10 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
 
   const handleDelete = async (mediaId: string) => {
     try {
-      await deleteMedia(mediaId);
+      const sure = window.confirm("Are you sure you want to delete this file?");
+      if (!sure) return;
+      const deletedBy = window.prompt("Enter your name (optional):") || undefined;
+      await deleteMedia(mediaId, deletedBy);
       setCurrentItems(currentItems.filter((item) => item.id !== mediaId));
     } catch (error) {
       console.error("Error deleting media:", error);

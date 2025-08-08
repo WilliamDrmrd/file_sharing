@@ -170,12 +170,14 @@ export async function uploadMedia(
   return finalResponses;
 }
 
-export async function deleteFolder(folderId: string): Promise<void> {
+export async function deleteFolder(folderId: string, deletedBy?: string): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/folders/${folderId}`, {
     method: "DELETE",
     headers: {
       "ngrok-skip-browser-warning": "true",
+      "Content-Type": "application/json",
     },
+    body: JSON.stringify({ deletedBy }),
   });
 
   if (!response.ok) {
@@ -183,12 +185,14 @@ export async function deleteFolder(folderId: string): Promise<void> {
   }
 }
 
-export async function deleteMedia(mediaId: string): Promise<void> {
+export async function deleteMedia(mediaId: string, deletedBy?: string): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/media/${mediaId}`, {
     method: "DELETE",
     headers: {
       "ngrok-skip-browser-warning": "true",
+      "Content-Type": "application/json",
     },
+    body: JSON.stringify({ deletedBy }),
   });
 
   if (!response.ok) {
