@@ -3,36 +3,72 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   HttpException,
   HttpStatus,
   Logger,
   Param,
   Post,
-  Res,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { MediaService } from './media.service';
 import { PrismaService } from '../prisma.service';
 import { GenerateSignedUrlDto } from './dto/generate-signed-url.dto';
 import { UploadCompleteDto } from './dto/upload-complete.dto';
-import {MediaGateway} from "./media.gateway";
+import { MediaGateway } from './media.gateway';
 
 @Controller('api/folders/:folderId/media')
 export class MediaController {
   private readonly logger = new Logger(MediaController.name);
 
-  constructor(private readonly mediaService: MediaService) {}
+  constructor(
+    private readonly mediaService: MediaService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Get()
-  async getFolderMedia(@Param('folderId') folderId: string) {
+  async getFolderMedia(
+    @Param('folderId') folderId: string,
+    @Headers('x-folder-password') providedPassword?: string,
+  ) {
     this.logger.log(`Getting media for folder: ${folderId}`);
+    const folder = await this.prisma.folder.findUnique({
+      where: { id: folderId },
+      select: { password: true },
+    });
+    if (!folder) {
+      throw new HttpException(
+        { error: 'Folder not found' },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    if (folder.password && folder.password !== (providedPassword || '')) {
+      throw new UnauthorizedException('Invalid folder password');
+    }
     return this.mediaService.findByFolder(folderId);
   }
 
   @Post('generateSignedUrls')
   async generateSignedUrl(
+    @Param('folderId') folderId: string,
+    @Headers('x-folder-password') providedPassword: string | undefined,
     @Body() generateSignedUrlDtos: GenerateSignedUrlDto[],
   ) {
-    let signedUrls: {
+    // Enforce folder password
+    const folder = await this.prisma.folder.findUnique({
+      where: { id: folderId },
+      select: { password: true },
+    });
+    if (!folder) {
+      throw new HttpException(
+        { error: 'Folder not found' },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    if (folder.password && folder.password !== (providedPassword || '')) {
+      throw new UnauthorizedException('Invalid folder password');
+    }
+    const signedUrls: {
       signedUrl: string;
       filename: string;
       contentType: string;
@@ -71,13 +107,30 @@ export class MediaController {
   }
 
   @Post('uploadComplete')
-  async uploadComplete(@Body() uploadCompleteDto: UploadCompleteDto) {
+  async uploadComplete(
+    @Param('folderId') folderId: string,
+    @Headers('x-folder-password') providedPassword: string | undefined,
+    @Body() uploadCompleteDto: UploadCompleteDto,
+  ) {
+    // Enforce folder password
+    const folder = await this.prisma.folder.findUnique({
+      where: { id: folderId },
+      select: { password: true },
+    });
+    if (!folder) {
+      throw new HttpException(
+        { error: 'Folder not found' },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    if (folder.password && folder.password !== (providedPassword || '')) {
+      throw new UnauthorizedException('Invalid folder password');
+    }
     try {
       return await this.mediaService.handleUploadComplete(uploadCompleteDto);
     } catch (error) {
-      this.logger.error(
-        `Failed to confirm upload completion: ${error.message}`,
-      );
+      const err = error as Error;
+      this.logger.error(`Failed to confirm upload completion: ${err.message}`);
       throw new HttpException(
         { error: 'Failed to confirm upload completion' },
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -97,23 +150,22 @@ export class SingleMediaController {
   private readonly logger = new Logger(SingleMediaController.name);
 
   constructor(
-      private readonly mediaService: MediaService,
-      private readonly prisma: PrismaService,
-      private readonly mediaGateway: MediaGateway,
-  ) {
-  }
+    private readonly mediaService: MediaService,
+    private readonly prisma: PrismaService,
+    private readonly mediaGateway: MediaGateway,
+  ) {}
 
   @Post('addThumbnail')
   async addThumbnail(
-      @Body('fileName') fileName: string,
-      @Body('thumbnailUrl') thumbnailUrl: string,
+    @Body('fileName') fileName: string,
+    @Body('thumbnailUrl') thumbnailUrl: string,
   ) {
     this.logger.log(`Adding thumbnail: ${fileName}`);
     await this.prisma.media.updateMany({
-      where: {originalFilename: fileName},
+      where: { originalFilename: fileName },
       data: {
-        thumbnailUrl
-      }
+        thumbnailUrl,
+      },
     });
     this.mediaGateway.notifyFileProcessed(fileName, thumbnailUrl);
   }

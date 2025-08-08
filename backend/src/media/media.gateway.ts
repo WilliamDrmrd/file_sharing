@@ -1,14 +1,13 @@
 import {
   WebSocketGateway,
-  SubscribeMessage,
-  MessageBody,
   WebSocketServer,
-  OnGatewayDisconnect, OnGatewayConnection
+  OnGatewayDisconnect,
+  OnGatewayConnection,
 } from '@nestjs/websockets';
-import {Server, Socket} from 'socket.io';
-import {PrismaService} from "../prisma.service";
+import { Server, Socket } from 'socket.io';
+import { PrismaService } from '../prisma.service';
 import { Logger } from '@nestjs/common';
-import {MediaService} from "./media.service";
+import { MediaService } from './media.service';
 
 @WebSocketGateway({
   cors: {
@@ -16,9 +15,10 @@ import {MediaService} from "./media.service";
   },
 })
 export class MediaGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  constructor(private readonly prisma: PrismaService,
-              private readonly mediaService: MediaService) {
-  }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mediaService: MediaService,
+  ) {}
 
   @WebSocketServer() server: Server;
   private logger = new Logger('FileProcessingGateway');
@@ -37,12 +37,11 @@ export class MediaGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const media = await this.prisma.media.findFirst({
         where: {
           originalFilename: fileName,
-          deleted: false
-        }
+          deleted: false,
+        },
       });
-      if (!media)
-        return this.logger.error(`File not found: ${fileName}`);
-      if (media.thumbnailUrl !== "") {
+      if (!media) return this.logger.error(`File not found: ${fileName}`);
+      if (media.thumbnailUrl !== '') {
         this.notifyFileProcessed(fileName, media.thumbnailUrl);
         return;
       }
@@ -65,7 +64,7 @@ export class MediaGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server.to(clientId).emit('fileProcessed_' + fileName, {
           fileName,
           status: 'complete',
-          thumbnailUrl
+          thumbnailUrl,
         });
         file.delete(fileName);
         return true;

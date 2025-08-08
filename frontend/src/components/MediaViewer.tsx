@@ -1,23 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
-import {
-  Dialog,
-  DialogContent,
-  IconButton,
-  Box,
-  Typography,
-  Button,
-  CircularProgress,
-} from "@mui/material";
-import {
-  Close,
-  ArrowBack,
-  ArrowForward,
-  Download,
-  Fullscreen,
-  FullscreenExit,
-  Delete
-} from "@mui/icons-material";
-import { MediaItem } from "../types";
+import React, {useEffect, useRef, useState} from "react";
+import {Box, Button, CircularProgress, Dialog, DialogContent, IconButton, Typography,} from "@mui/material";
+import {ArrowBack, ArrowForward, Close, Delete, Download, Fullscreen, FullscreenExit} from "@mui/icons-material";
+import {MediaItem} from "../types";
+import ExifReader from "exifreader";
 
 interface MediaViewerProps {
   items: MediaItem[];
@@ -53,6 +38,7 @@ export default function MediaViewer({
     existingBlobUrls,
   );
   const pendingRequestsRef = useRef(new Map<string, Promise<string | null>>());
+  const creationDatesRef = useRef<{ [key: string]: string }>({});
 
   // Reset the index when items or currentIndex changes
   useEffect(() => {
@@ -66,6 +52,13 @@ export default function MediaViewer({
 
     // Get current item
     const currentItem = items[index];
+
+    async function getPhotoMetadata(blob: Blob) {
+      const arrayBuffer = await blob.arrayBuffer();
+      const tags = ExifReader.load(arrayBuffer);
+
+      return tags.DateTimeOriginal?.description || "";
+    }
 
     // Function to fetch a media item
     const fetchMediaItem = async (item: MediaItem): Promise<string | null> => {
@@ -133,6 +126,10 @@ export default function MediaViewer({
           // Create a blob and get URL
           const mimeType = item.type === 'photo' ? 'image/jpeg' : 'video/mp4';
           const blob = new Blob([chunksAll], { type: mimeType });
+          try {
+            if (item.type === 'photo')
+              creationDatesRef.current[item.id] = await getPhotoMetadata(blob);
+          } catch (error) {}
           const blobUrl = URL.createObjectURL(blob);
 
           setCurrentDownloadProgress(100);
@@ -518,7 +515,7 @@ export default function MediaViewer({
           >
             <Box>
               <Typography variant="body2" color="white">
-                {index + 1} / {items.length}
+                {index + 1} / {items.length}{currentItem.type === "photo" ? " | Created: " : ""} {creationDatesRef.current[currentItem.id]}
               </Typography>
               {currentItem.originalFilename && (
                 <Typography
@@ -530,7 +527,6 @@ export default function MediaViewer({
                 </Typography>
               )}
             </Box>
-
             <Box>
               <Button
                 startIcon={

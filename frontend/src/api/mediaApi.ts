@@ -50,6 +50,7 @@ export async function fetchFolderContent(
   const response = await fetch(`${API_BASE_URL}/folders/${folderId}/media`, {
     headers: {
       "ngrok-skip-browser-warning": "true",
+      "x-folder-password": sessionStorage.getItem(`folder:${folderId}:password`) || "",
     },
   });
   if (!response.ok) {
@@ -84,6 +85,7 @@ export async function uploadMedia(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "x-folder-password": sessionStorage.getItem(`folder:${folderId}:password`) || "",
       },
       body: JSON.stringify(requestArray),
     },
@@ -125,6 +127,7 @@ export async function uploadMedia(
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
+                  "x-folder-password": sessionStorage.getItem(`folder:${folderId}:password`) || "",
                 },
                 body: JSON.stringify({
                   folderId: folderId,
@@ -212,7 +215,11 @@ export async function verifyFolderPassword(
     }
 
     const data = await response.json();
-    return data.verified === true;
+    const ok = data.verified === true;
+    if (ok) {
+      sessionStorage.setItem(`folder:${folderId}:password`, password);
+    }
+    return ok;
   } catch (error) {
     console.error("Error verifying folder password:", error);
     return false;
@@ -224,6 +231,7 @@ export async function getZip(folderId: string): Promise<string> {
     method: "POST",
     headers: {
       "ngrok-skip-browser-warning": "true",
+      "x-folder-password": sessionStorage.getItem(`folder:${folderId}:password`) || "",
     },
   });
 

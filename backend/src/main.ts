@@ -2,7 +2,6 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { join } from 'path';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -18,9 +17,16 @@ async function bootstrap() {
       'https://snapshare.ramizz.xyz',
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: ['Content-Type', 'Accept', 'ngrok-skip-browser-warning', 'x-admin-token'],
+    allowedHeaders: [
+      'Content-Type',
+      'Accept',
+      'ngrok-skip-browser-warning',
+      'x-admin-token',
+      // Added to support password-protected folders
+      'x-folder-password',
+    ],
     credentials: true, // Optional, if you use cookies or auth
   });
   await app.listen(3000);
 }
-bootstrap();
+void bootstrap();

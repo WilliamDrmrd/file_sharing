@@ -67,7 +67,8 @@ export default function Folder() {
         setFolder(folderData);
 
         // If folder has no password or password is already verified, fetch content
-        if (!folderData.password || passwordVerified) {
+        const stored = sessionStorage.getItem(`folder:${id}:password`);
+        if (!folderData.password || passwordVerified || stored) {
           fetchFolderContent(id!)
             .then((items) => {
               console.log("Received folder content:", items);
@@ -188,6 +189,8 @@ export default function Folder() {
 
       if (isVerified) {
         setPasswordVerified(true);
+        // persist for refresh/navigation
+        sessionStorage.setItem(`folder:${id}:password`, passwordInput);
         // Fetch folder content after successful verification
         fetchFolderContent(id)
           .then((items) => {
@@ -222,7 +225,7 @@ export default function Folder() {
     >
       {/* Password Dialog */}
       <Dialog
-        open={folder?.password !== undefined && !passwordVerified}
+        open={folder?.password !== undefined && !(passwordVerified || !!sessionStorage.getItem(`folder:${id}:password`))}
         maxWidth="xs"
         fullWidth
       >

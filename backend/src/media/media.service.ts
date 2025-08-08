@@ -1,8 +1,8 @@
-import {Injectable, Logger} from '@nestjs/common';
-import {PrismaService} from '../prisma.service';
-import {Media, MediaType} from '@prisma/client';
-import {Storage, GetSignedUrlConfig} from '@google-cloud/storage';
-import {UploadCompleteDto} from './dto/upload-complete.dto';
+import { Injectable, Logger } from '@nestjs/common';
+import { PrismaService } from '../prisma.service';
+import { Media, MediaType } from '@prisma/client';
+import { Storage, GetSignedUrlConfig } from '@google-cloud/storage';
+import { UploadCompleteDto } from './dto/upload-complete.dto';
 
 @Injectable()
 export class MediaService {
@@ -15,7 +15,7 @@ export class MediaService {
     const keyFilename =
       process.env.GCLOUD_KEY_FILE || '/path/to/default-key.json';
 
-    this.storage = new Storage({projectId, keyFilename});
+    this.storage = new Storage({ projectId, keyFilename });
     this.bucketName = process.env.GCLOUD_BUCKET_NAME || 'default-bucket-name';
   }
 
@@ -53,38 +53,43 @@ export class MediaService {
         },
       },
     });
-    const finalFilename = files.length > 0
-      ? `${filename.split('.')[0]}-${files.length}.${filename.split('.').pop()}`
-      : filename;
+    const finalFilename =
+      files.length > 0
+        ? `${filename.split('.')[0]}-${files.length}.${filename.split('.').pop()}`
+        : filename;
 
     try {
       const [url] = await this.storage
-      .bucket(this.bucketName)
-      .file(finalFilename)
-      .getSignedUrl(options);
+        .bucket(this.bucketName)
+        .file(finalFilename)
+        .getSignedUrl(options);
 
       this.logger.log(`Generated signed URL for ${finalFilename}`);
-      return {url, finalFilename};
+      return { url, finalFilename };
     } catch (error) {
+      const err = error as Error;
       this.logger.error(
-        `Failed to generate signed URL for ${finalFilename}: ${error.message}`,
+        `Failed to generate signed URL for ${finalFilename}: ${err.message}`,
       );
       throw new Error('Failed to generate signed URL');
     }
   }
 
-  async generateSignedUrlRead(bucketName: string, filename: string): Promise<string> {
+  async generateSignedUrlRead(
+    bucketName: string,
+    filename: string,
+  ): Promise<string> {
     const options = {
-      version: 'v4' as 'v4',
-      action: 'read' as 'read',
+      version: 'v4' as const,
+      action: 'read' as const,
       expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 1 year expiration (maximum recommended)
     };
 
     try {
       const [url] = await this.storage
-      .bucket(bucketName)
-      .file(filename)
-      .getSignedUrl(options);
+        .bucket(bucketName)
+        .file(filename)
+        .getSignedUrl(options);
       return url;
     } catch (error) {
       console.error('Error generating signed URL:', error);
@@ -98,7 +103,10 @@ export class MediaService {
       throw new Error('Filename is required');
     }
 
-    const url = await this.generateSignedUrlRead(this.bucketName, data.filename);
+    const url = await this.generateSignedUrlRead(
+      this.bucketName,
+      data.filename,
+    );
 
     this.logger.log(`File ${data.filename} upload complete`);
     return this.prisma.media.create({
@@ -119,14 +127,14 @@ export class MediaService {
         folderId,
         deleted: false,
       },
-      orderBy: {uploadedAt: 'desc'},
+      orderBy: { uploadedAt: 'desc' },
     });
   }
 
   async findById(mediaId: string) {
     this.logger.log(`Finding media by ID: ${mediaId}`);
     return this.prisma.media.findUnique({
-      where: {id: mediaId},
+      where: { id: mediaId },
     });
   }
 
@@ -140,7 +148,7 @@ export class MediaService {
       `Creating media for folder ${folderId}, type ${type}, url ${url}`,
     );
     return this.prisma.media.create({
-      data: {folderId, url, type, uploadedBy},
+      data: { folderId, url, type, uploadedBy },
     });
   }
 
@@ -155,7 +163,7 @@ export class MediaService {
       `Creating media for folder ${folderId}, type ${type}, url ${url}, originalFilename ${originalFilename}`,
     );
     return this.prisma.media.create({
-      data: {folderId, url, type, uploadedBy, originalFilename},
+      data: { folderId, url, type, uploadedBy, originalFilename },
     });
   }
 
@@ -165,46 +173,50 @@ export class MediaService {
       // First get the media to see the file path
       const media = await this.findById(mediaId);
       if (!(media && media.url && media.originalFilename))
-        throw new Error("media ID not found in the DB");
+        throw new Error('media ID not found in the DB');
       const bucket = this.storage.bucket(this.bucketName);
       const file = bucket.file(media.originalFilename);
 
-      await file.rename("deleted_" + file.name);
+      await file.rename('deleted_' + file.name);
       console.log(`File ${media.originalFilename} soft-deleted from GCS`);
 
-      // @ts-ignore
-      if ((await this.prisma.folder.findUnique({
-        where: {id: media.folderId},
+      const folderWithMedia = await this.prisma.folder.findUnique({
+        where: { id: media.folderId },
         include: {
           media: {
             where: {
-              deleted: false
-            }
-          }
-        }
-      })).media.length === 1) {
-        this.logger.log(`Deleting folder ${media.folderId} as it has no more media`);
+              deleted: false,
+            },
+          },
+        },
+      });
+
+      if ((folderWithMedia?.media?.length ?? 0) === 1) {
+        this.logger.log(
+          `Deleting folder ${media.folderId} as it has no more media`,
+        );
         await this.prisma.folder.update({
           where: {
-            id: media.folderId
+            id: media.folderId,
           },
           data: {
-            deleted: true
-          }
-        })
+            deleted: true,
+          },
+        });
       }
       this.logger.log(`Removing media from database: ${mediaId}`);
       return this.prisma.media.update({
         where: {
-          id: mediaId
+          id: mediaId,
         },
         data: {
-          originalFilename: "deleted_" + media.originalFilename,
+          originalFilename: 'deleted_' + media.originalFilename,
           deleted: true,
         },
       });
     } catch (error) {
-      this.logger.error(`Error deleting media: ${error.message}`);
+      const err = error as Error;
+      this.logger.error(`Error deleting media: ${err.message}`);
       throw error;
     }
   }
