@@ -327,10 +327,15 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
 
       <Box
         sx={{
-          display: "flex",
-          flexWrap: "wrap",
-          margin: { xs: -0.5, sm: -0.75, md: -1.5 },
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "repeat(2, minmax(0, 1fr))",
+            sm: "repeat(3, minmax(0, 1fr))",
+            md: "repeat(4, minmax(0, 1fr))",
+          },
+          gap: { xs: 1, sm: 1.5, md: 2 },
           mt: 2,
+          width: "100%",
         }}
       >
         {currentItems.map((item, index) => {
@@ -340,8 +345,8 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
           return (
             <Box
               sx={{
-                width: { xs: "50%", sm: "33.33%", md: "25%" },
-                p: { xs: 0.5, sm: 0.75, md: 1.5 },
+                width: "100%",
+                p: 0,
               }}
               key={item.id}
             >
@@ -519,7 +524,7 @@ export default function MediaGrid({ items, isAdmin = false, folderId }: Props) {
                   <Box
                     sx={{
                       display: "flex",
-                      justifyContent: "space-between",
+                      justifyContent: "flex-end",
                       alignItems: "center",
                       mt: "auto",
                       gap: { xs: 1, sm: 1.5, md: 2 },

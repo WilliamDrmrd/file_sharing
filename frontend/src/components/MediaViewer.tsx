@@ -505,15 +505,26 @@ export default function MediaViewer({
               left: 0,
               right: 0,
               display: "flex",
-              justifyContent: "space-between",
               alignItems: "center",
+              justifyContent: "flex-start",
+              gap: 1,
               p: 2,
               bgcolor: "rgba(0,0,0,0.7)",
               zIndex: 10,
               height: "60px",
             }}
           >
-            <Box>
+            <Box
+              sx={{
+                flex: 1,
+                minWidth: 0,
+                overflow: "hidden",
+                pr: 1,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+              }}
+            >
               <Typography variant="body2" color="white">
                 {index + 1} / {items.length}{currentItem.type === "photo" ? " | Created: " : ""} {creationDatesRef.current[currentItem.id]}
               </Typography>
@@ -521,13 +532,15 @@ export default function MediaViewer({
                 <Typography
                   variant="body2"
                   color="white"
-                  sx={{ opacity: 0.8, mt: 0.5 }}
+                  sx={{ opacity: 0.8, mt: 0.5, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}
                 >
                   {currentItem.originalFilename}
                 </Typography>
               )}
             </Box>
-            <Box>
+
+            {/* Controls for sm and up: full buttons */}
+            <Box sx={{ display: { xs: "none", sm: "flex" }, alignItems: "center", flexShrink: 0 }}>
               <Button
                 startIcon={
                   deleting ? (
@@ -559,6 +572,19 @@ export default function MediaViewer({
               </Button>
 
               <IconButton onClick={toggleFullscreen} sx={{ color: "white" }}>
+                {fullscreen ? <FullscreenExit /> : <Fullscreen />}
+              </IconButton>
+            </Box>
+
+            {/* Controls for xs: compact icon buttons */}
+            <Box sx={{ display: { xs: "flex", sm: "none" }, alignItems: "center", gap: 1, ml: "auto", flexShrink: 0 }}>
+              <IconButton onClick={handleDeleteInView} disabled={deleting} sx={{ color: "red" }} aria-label="Delete">
+                {deleting ? <CircularProgress size={16} color="inherit" /> : <Delete />}
+              </IconButton>
+              <IconButton onClick={downloadFile} disabled={downloading} sx={{ color: "white" }} aria-label="Download">
+                {downloading ? <CircularProgress size={16} color="inherit" /> : <Download />}
+              </IconButton>
+              <IconButton onClick={toggleFullscreen} sx={{ color: "white" }} aria-label="Fullscreen">
                 {fullscreen ? <FullscreenExit /> : <Fullscreen />}
               </IconButton>
             </Box>

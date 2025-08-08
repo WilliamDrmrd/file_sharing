@@ -221,6 +221,8 @@ export default function Folder() {
         minHeight: "calc(100vh - 124px)", // Account for header height
         display: "flex",
         flexDirection: "column",
+        width: "100%",
+        overflowX: "hidden",
       }}
     >
       {/* Password Dialog */}
@@ -440,7 +442,7 @@ export default function Folder() {
               "&::after": {
                 content: '""',
                 position: "absolute",
-                inset: -20,
+                inset: 0,
                 border: `2px dashed ${theme.palette.primary.main}`,
                 borderRadius: 4,
                 bgcolor: alpha(theme.palette.primary.main, 0.08),
