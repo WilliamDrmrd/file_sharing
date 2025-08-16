@@ -40,16 +40,16 @@ export class FoldersController {
     return this.foldersService.verifyPassword(id, body.password);
   }
 
-  @Delete(':id')
-  async remove(
-    @Param('id') id: string,
-    @Body('deletedBy') deletedBy?: string,
-  ) {
-    this.logger.log(
-      `Deleting folder: ${id}${deletedBy ? ` by ${deletedBy}` : ''}`,
-    );
-    return this.foldersService.remove(id);
-  }
+  // @Delete(':id')
+  // async remove(
+  //   @Param('id') id: string,
+  //   @Body('deletedBy') deletedBy?: string,
+  // ) {
+  //   this.logger.log(
+  //     `Deleting folder: ${id}${deletedBy ? ` by ${deletedBy}` : ''}`,
+  //   );
+  //   return this.foldersService.remove(id);
+  // }
 
   @Post('getZip/:id')
   async getZip(
